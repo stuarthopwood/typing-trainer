@@ -42,8 +42,8 @@ export default function ModeSelector({
           onClick={() => onModeChange("drill")}
           className={`p-2.5 rounded-lg transition-all ${
             mode === "drill"
-              ? "text-indigo-500 bg-indigo-500/10"
-              : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+              ? "text-[#00ff88] bg-[#00ff88]/10"
+              : "text-neutral-500 hover:text-neutral-300"
           }`}
           title="Key Drill"
         >
@@ -53,8 +53,8 @@ export default function ModeSelector({
           onClick={() => onModeChange("passage")}
           className={`p-2.5 rounded-lg transition-all ${
             mode === "passage"
-              ? "text-indigo-500 bg-indigo-500/10"
-              : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+              ? "text-[#00ff88] bg-[#00ff88]/10"
+              : "text-neutral-500 hover:text-neutral-300"
           }`}
           title="Passages"
         >
@@ -65,24 +65,24 @@ export default function ModeSelector({
       {/* Difficulty — signal bar style, cycles on click */}
       <button
         onClick={cycleDifficulty}
-        className="flex items-end gap-0.5 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+        className="flex items-end gap-0.5 p-2 rounded-lg hover:bg-neutral-800 transition-all"
         title={`Difficulty: ${passageDifficulty} (click to cycle)`}
       >
         <span
           className={`w-2 rounded-sm transition-colors ${
-            difficultyIndex >= 0 ? "bg-green-500" : "bg-slate-300 dark:bg-slate-600"
+            difficultyIndex >= 0 ? "bg-green-500" : "bg-neutral-700"
           }`}
           style={{ height: "10px" }}
         />
         <span
           className={`w-2 rounded-sm transition-colors ${
-            difficultyIndex >= 1 ? "bg-amber-500" : "bg-slate-300 dark:bg-slate-600"
+            difficultyIndex >= 1 ? "bg-amber-500" : "bg-neutral-700"
           }`}
           style={{ height: "16px" }}
         />
         <span
           className={`w-2 rounded-sm transition-colors ${
-            difficultyIndex >= 2 ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"
+            difficultyIndex >= 2 ? "bg-red-500" : "bg-neutral-700"
           }`}
           style={{ height: "22px" }}
         />
@@ -97,8 +97,8 @@ export default function ModeSelector({
               onClick={() => onDrillLevelChange(level)}
               className={`px-2.5 py-1 text-xs rounded-md transition-all ${
                 drillLevel === level
-                  ? "text-indigo-500 bg-indigo-500/10 font-medium"
-                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                  ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
+                  : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
               {level.replace("-", " ")}
@@ -115,8 +115,8 @@ export default function ModeSelector({
               onClick={() => onCategoryChange(c)}
               className={`px-2.5 py-1 text-xs rounded-md transition-all ${
                 passageCategory === c
-                  ? "text-indigo-500 bg-indigo-500/10 font-medium"
-                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                  ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
+                  : "text-neutral-500 hover:text-neutral-300"
               }`}
             >
               {c}
