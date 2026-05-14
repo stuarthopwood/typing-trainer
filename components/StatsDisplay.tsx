@@ -19,7 +19,7 @@ export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, e
   const time = stats ? Math.round(stats.duration / 1000) : Math.round(elapsed / 1000);
 
   return (
-    <div className="flex items-center justify-center gap-8 sm:gap-12 py-4">
+    <div className="flex items-center justify-center gap-10 sm:gap-16 py-6">
       <Stat
         icon={faGauge}
         value={wpm}
@@ -69,7 +69,7 @@ function Stat({
 }) {
   return (
     <div className={`text-center transition-opacity ${active ? "opacity-100" : "opacity-40"}`}>
-      <div className={`text-3xl sm:text-4xl font-bold ${color}`}>
+      <div className={`text-4xl sm:text-5xl font-bold ${color}`}>
         {value}
       </div>
       <div className="text-xs text-neutral-500 mt-1 flex items-center justify-center gap-1">

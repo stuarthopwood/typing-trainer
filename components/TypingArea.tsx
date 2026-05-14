@@ -38,8 +38,6 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
             next.delete(newPos);
             return next;
           });
-          keyStrokesRef.current.pop();
-          onProgress(newPos, keyStrokesRef.current);
         }
         return;
       }
@@ -114,7 +112,7 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
         className="absolute inset-0 w-full h-full pointer-events-none z-10"
       />
       <div
-        className={`p-8 sm:p-12 rounded-2xl transition-all duration-300 dark:bg-[#141414] ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out] ring-2 ring-red-500/60" : ""}`}
+        className={`p-8 sm:p-12 transition-all duration-300 ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out]" : ""}`}
       >
         <p className="text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap select-none font-[family-name:var(--font-jetbrains)]">
           {text.split("").map((char, i) => {
