@@ -63,14 +63,14 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3">
+        <div className="w-full px-6 sm:px-10 py-3">
           <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
             ⌨️ Typing Trainer
           </h1>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="w-full px-6 sm:px-10 py-6 space-y-6">
         <ModeSelector
           mode={mode}
           drillLevel={drillLevel}

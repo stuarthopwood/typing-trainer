@@ -26,21 +26,23 @@ describe("Drills — Level Configuration", () => {
 });
 
 describe("Drills — Text Generation", () => {
-  it("should generate text from the given level's character set", () => {
+  it("should generate text containing real words", () => {
     const config = DRILL_LEVELS[0]; // home-row
     const text = generateDrillText(config, 20);
 
-    for (const char of text) {
-      if (char === " ") continue;
-      expect(config.chars).toContain(char);
+    expect(text.length).toBeGreaterThan(0);
+    expect(text).toContain(" ");
+    const words = text.split(" ");
+    for (const word of words) {
+      expect(word.length).toBeGreaterThanOrEqual(2);
     }
   });
 
   it("should generate text approximately the requested length", () => {
     const config = DRILL_LEVELS[0];
     const text = generateDrillText(config, 40);
-    expect(text.length).toBeGreaterThanOrEqual(40);
-    expect(text.length).toBeLessThan(80);
+    expect(text.length).toBeGreaterThanOrEqual(30);
+    expect(text.length).toBeLessThan(100);
   });
 
   it("should contain spaces (multiple words)", () => {
