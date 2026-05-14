@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartBar } from "@fortawesome/free-solid-svg-icons";
+import { faChartBar, faKeyboard } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
 import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
@@ -90,8 +90,9 @@ export default function Home() {
     <main className="min-h-screen bg-slate-50 dark:bg-[#0d0d0d] transition-colors">
       <header className="dark:bg-[#141414] border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm">
         <div className="w-full px-6 sm:px-10 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300">
-            ⌨️ Typing Trainer
+          <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300 flex items-center gap-2">
+            <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5 text-[#00ff88]" />
+            Typing Trainer
           </h1>
           <Link href="/stats" className="text-neutral-400 hover:text-[#00ff88] transition-colors" title="Stats">
             <FontAwesomeIcon icon={faChartBar} className="w-5 h-5" />

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartBar } from "@fortawesome/free-solid-svg-icons";
 import { getProgress, type ProgressData } from "@/lib/progress";
 
 export default function StatsPage() {
@@ -39,8 +39,9 @@ export default function StatsPage() {
           >
             <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
           </Link>
-          <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300">
-            📊 Stats
+          <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300 flex items-center gap-2">
+            <FontAwesomeIcon icon={faChartBar} className="w-5 h-5 text-[#00ff88]" />
+            Stats
           </h1>
         </div>
       </header>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback, useState, memo } from "react";
 import type { KeyStroke, CelebrationTier } from "@/lib/types";
 import { getCelebrationTier } from "@/lib/engine";
 import { createConfetti, getGlowClass } from "@/lib/celebrations";
@@ -115,22 +115,13 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
         className={`p-8 sm:p-12 transition-all duration-300 ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out]" : ""}`}
       >
         <p className="text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap select-none font-[family-name:var(--font-jetbrains)]">
-          {text.split("").map((char, i) => {
-            let className = "text-neutral-700 dark:text-neutral-600";
-            if (i < position) {
-              className = errors.has(i)
-                ? "text-red-400 line-through decoration-2 decoration-red-500/80"
-                : "text-emerald-500 dark:text-[#00ff88]/80";
-            } else if (i === position) {
-              className =
-                "text-white dark:text-white bg-emerald-600/20 dark:bg-[#00ff88]/15 rounded-sm border-b-2 border-[#00ff88]";
-            }
-            return (
-              <span key={i} className={className}>
-                {char === "\n" ? "↵\n" : char === " " && i === position ? "·" : char}
-              </span>
-            );
-          })}
+          {text.split("").map((char, i) => (
+            <Char
+              key={i}
+              char={char}
+              state={i < position ? (errors.has(i) ? "error" : "correct") : i === position ? "active" : "pending"}
+            />
+          ))}
         </p>
       </div>
       {position === 0 && (
@@ -141,3 +132,18 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
     </div>
   );
 }
+
+const Char = memo(function Char({ char, state }: { char: string; state: "pending" | "active" | "correct" | "error" }) {
+  const className =
+    state === "error"
+      ? "text-red-400 line-through decoration-2 decoration-red-500/80"
+      : state === "correct"
+        ? "text-[#00ff88]/80"
+        : state === "active"
+          ? "text-white bg-[#00ff88]/15 rounded-sm border-b-2 border-[#00ff88]"
+          : "text-neutral-600";
+
+  const display = char === "\n" ? "↵\n" : state === "active" && char === " " ? "·" : char;
+
+  return <span className={className}>{display}</span>;
+});
