@@ -114,18 +114,18 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
         className="absolute inset-0 w-full h-full pointer-events-none z-10"
       />
       <div
-        className={`p-8 sm:p-10 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 transition-all duration-300 ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out] border-red-400 dark:border-red-500" : ""}`}
+        className={`p-8 sm:p-12 rounded-2xl transition-all duration-300 dark:bg-[#141414] ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out] ring-2 ring-red-500/60" : ""}`}
       >
-        <p className="text-2xl sm:text-3xl md:text-4xl leading-relaxed tracking-wide whitespace-pre-wrap select-none font-[family-name:var(--font-jetbrains)]">
+        <p className="text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap select-none font-[family-name:var(--font-jetbrains)]">
           {text.split("").map((char, i) => {
-            let className = "text-slate-300 dark:text-slate-600";
+            let className = "text-neutral-700 dark:text-neutral-600";
             if (i < position) {
               className = errors.has(i)
-                ? "text-red-500 bg-red-200 dark:bg-red-900/50 rounded px-0.5 line-through decoration-2"
-                : "text-emerald-600 dark:text-emerald-400";
+                ? "text-red-400 line-through decoration-2 decoration-red-500/80"
+                : "text-emerald-500 dark:text-[#00ff88]/80";
             } else if (i === position) {
               className =
-                "text-slate-900 dark:text-white bg-indigo-200 dark:bg-indigo-700/60 rounded px-0.5 border-b-3 border-indigo-500";
+                "text-white dark:text-white bg-emerald-600/20 dark:bg-[#00ff88]/15 rounded-sm border-b-2 border-[#00ff88]";
             }
             return (
               <span key={i} className={className}>

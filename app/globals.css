@@ -9,3 +9,11 @@
   60% { transform: translateX(-2px); }
   80% { transform: translateX(2px); }
 }
+
+:root {
+  --accent: #00ff88;
+  --accent-dim: #00cc6a;
+  --bg-dark: #0d0d0d;
+  --bg-surface: #141414;
+  --bg-elevated: #1a1a1a;
+}

@@ -1,5 +1,7 @@
 "use client";
 
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faKeyboard, faBook, faSignal } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
 
 interface ModeSelectorProps {
@@ -13,6 +15,8 @@ interface ModeSelectorProps {
   onCategoryChange: (c: Passage["category"] | "all") => void;
 }
 
+const DIFFICULTIES: Passage["difficulty"][] = ["beginner", "intermediate", "advanced"];
+
 export default function ModeSelector({
   mode,
   drillLevel,
@@ -23,29 +27,78 @@ export default function ModeSelector({
   onDifficultyChange,
   onCategoryChange,
 }: ModeSelectorProps) {
+  const difficultyIndex = DIFFICULTIES.indexOf(passageDifficulty);
+
+  const cycleDifficulty = () => {
+    const next = (difficultyIndex + 1) % DIFFICULTIES.length;
+    onDifficultyChange(DIFFICULTIES[next]);
+  };
+
   return (
-    <div className="space-y-3">
+    <div className="flex flex-wrap items-center gap-4">
       {/* Mode Toggle */}
-      <div className="flex gap-2">
-        <ModeButton active={mode === "drill"} onClick={() => onModeChange("drill")}>
-          ⌨️ Key Drill
-        </ModeButton>
-        <ModeButton active={mode === "passage"} onClick={() => onModeChange("passage")}>
-          📖 Passages
-        </ModeButton>
+      <div className="flex gap-1">
+        <button
+          onClick={() => onModeChange("drill")}
+          className={`p-2.5 rounded-lg transition-all ${
+            mode === "drill"
+              ? "text-indigo-500 bg-indigo-500/10"
+              : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+          }`}
+          title="Key Drill"
+        >
+          <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => onModeChange("passage")}
+          className={`p-2.5 rounded-lg transition-all ${
+            mode === "passage"
+              ? "text-indigo-500 bg-indigo-500/10"
+              : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+          }`}
+          title="Passages"
+        >
+          <FontAwesomeIcon icon={faBook} className="w-5 h-5" />
+        </button>
       </div>
 
-      {/* Mode-specific options */}
+      {/* Difficulty — signal bar style, cycles on click */}
+      <button
+        onClick={cycleDifficulty}
+        className="flex items-end gap-0.5 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+        title={`Difficulty: ${passageDifficulty} (click to cycle)`}
+      >
+        <span
+          className={`w-2 rounded-sm transition-colors ${
+            difficultyIndex >= 0 ? "bg-green-500" : "bg-slate-300 dark:bg-slate-600"
+          }`}
+          style={{ height: "10px" }}
+        />
+        <span
+          className={`w-2 rounded-sm transition-colors ${
+            difficultyIndex >= 1 ? "bg-amber-500" : "bg-slate-300 dark:bg-slate-600"
+          }`}
+          style={{ height: "16px" }}
+        />
+        <span
+          className={`w-2 rounded-sm transition-colors ${
+            difficultyIndex >= 2 ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"
+          }`}
+          style={{ height: "22px" }}
+        />
+      </button>
+
+      {/* Drill level or category selector */}
       {mode === "drill" && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {(["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"] as DrillLevel[]).map((level) => (
             <button
               key={level}
               onClick={() => onDrillLevelChange(level)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              className={`px-2.5 py-1 text-xs rounded-md transition-all ${
                 drillLevel === level
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                  ? "text-indigo-500 bg-indigo-500/10 font-medium"
+                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
               }`}
             >
               {level.replace("-", " ")}
@@ -55,29 +108,15 @@ export default function ModeSelector({
       )}
 
       {mode === "passage" && (
-        <div className="flex flex-wrap gap-1.5">
-          {(["beginner", "intermediate", "advanced"] as Passage["difficulty"][]).map((d) => (
-            <button
-              key={d}
-              onClick={() => onDifficultyChange(d)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                passageDifficulty === d
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-              }`}
-            >
-              {d}
-            </button>
-          ))}
-          <span className="w-px h-6 self-center bg-slate-300 dark:bg-slate-600 mx-1" />
-          {(["all", "book", "movie", "code", "quote"] as (Passage["category"] | "all")[]).map((c) => (
+        <div className="flex flex-wrap gap-1">
+          {(["all", "book", "movie", "code"] as (Passage["category"] | "all")[]).map((c) => (
             <button
               key={c}
               onClick={() => onCategoryChange(c)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              className={`px-2.5 py-1 text-xs rounded-md transition-all ${
                 passageCategory === c
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
+                  ? "text-indigo-500 bg-indigo-500/10 font-medium"
+                  : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
               }`}
             >
               {c}
@@ -86,20 +125,5 @@ export default function ModeSelector({
         </div>
       )}
     </div>
-  );
-}
-
-function ModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-xl transition-colors ${
-        active
-          ? "bg-indigo-600 text-white shadow-sm"
-          : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

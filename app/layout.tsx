@@ -33,7 +33,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full font-[family-name:var(--font-inter)] bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+      <body className="min-h-full font-[family-name:var(--font-inter)] bg-slate-50 dark:bg-[#0d0d0d] text-slate-900 dark:text-neutral-200">
         {children}
         <Analytics />
         <SpeedInsights />

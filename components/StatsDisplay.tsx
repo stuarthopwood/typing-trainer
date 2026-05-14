@@ -1,5 +1,7 @@
 "use client";
 
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGauge, faBullseye, faFire, faClock } from "@fortawesome/free-solid-svg-icons";
 import type { SessionStats } from "@/lib/types";
 
 interface StatsDisplayProps {
@@ -7,55 +9,73 @@ interface StatsDisplayProps {
   liveWpm: number;
   liveAccuracy: number;
   isActive: boolean;
+  elapsed: number;
+  combo: number;
 }
 
-export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive }: StatsDisplayProps) {
+export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, elapsed, combo }: StatsDisplayProps) {
   const wpm = stats?.wpm ?? liveWpm;
   const accuracy = stats?.accuracy ?? liveAccuracy;
+  const time = stats ? Math.round(stats.duration / 1000) : Math.round(elapsed / 1000);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <StatCard label="WPM" value={wpm} highlight={isActive} />
-      <StatCard
-        label="Accuracy"
-        value={`${accuracy}%`}
-        highlight={isActive}
-        color={accuracy >= 95 ? "green" : accuracy >= 80 ? "amber" : "red"}
+    <div className="flex items-center justify-center gap-8 sm:gap-12 py-4">
+      <Stat
+        icon={faGauge}
+        value={wpm}
+        label="WPM"
+        active={isActive}
+        color="text-emerald-400"
       />
-      {stats && (
-        <>
-          <StatCard label="Chars" value={stats.totalChars} />
-          <StatCard label="Errors" value={stats.errors} color={stats.errors > 0 ? "red" : "green"} />
-        </>
+      <Stat
+        icon={faBullseye}
+        value={`${accuracy}%`}
+        label="Accuracy"
+        active={isActive}
+        color={accuracy >= 95 ? "text-emerald-400" : accuracy >= 80 ? "text-amber-400" : "text-red-400"}
+      />
+      <Stat
+        icon={faClock}
+        value={`${time}s`}
+        label="Time"
+        active={isActive}
+        color="text-neutral-500"
+      />
+      {combo > 2 && (
+        <Stat
+          icon={faFire}
+          value={combo}
+          label="Combo"
+          active={true}
+          color="text-orange-400"
+        />
       )}
     </div>
   );
 }
 
-function StatCard({
-  label,
+function Stat({
+  icon,
   value,
-  highlight,
+  label,
+  active,
   color,
 }: {
-  label: string;
+  icon: typeof faGauge;
   value: string | number;
-  highlight?: boolean;
-  color?: "green" | "amber" | "red";
+  label: string;
+  active?: boolean;
+  color: string;
 }) {
-  const colorClass =
-    color === "green"
-      ? "text-green-600 dark:text-green-400"
-      : color === "amber"
-        ? "text-amber-600 dark:text-amber-400"
-        : color === "red"
-          ? "text-red-600 dark:text-red-400"
-          : "text-slate-800 dark:text-slate-100";
-
   return (
-    <div className={`p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-center ${highlight ? "ring-1 ring-indigo-300 dark:ring-indigo-700" : ""}`}>
-      <div className={`text-xl sm:text-2xl font-bold ${colorClass}`}>{value}</div>
-      <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">{label}</div>
+    <div className={`text-center transition-opacity ${active ? "opacity-100" : "opacity-40"}`}>
+      <div className={`text-3xl sm:text-4xl font-bold ${color}`}>
+        {value}
+      </div>
+      <div className="text-xs text-neutral-500 mt-1 flex items-center justify-center gap-1">
+        <FontAwesomeIcon icon={icon} className="w-3 h-3" />
+        {label}
+      </div>
     </div>
   );
 }

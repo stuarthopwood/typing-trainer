@@ -19,6 +19,8 @@ export default function Home() {
   const [liveWpm, setLiveWpm] = useState(0);
   const [liveAccuracy, setLiveAccuracy] = useState(100);
   const [isActive, setIsActive] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [combo, setCombo] = useState(0);
   const [textKey, setTextKey] = useState(0);
 
   const currentText = useMemo(() => {
@@ -40,6 +42,14 @@ export default function Home() {
     const correct = keyStrokes.filter((k) => k.correct).length;
     setLiveWpm(calculateWpm(correct, duration));
     setLiveAccuracy(calculateAccuracy(correct, keyStrokes.length));
+    setElapsed(duration);
+
+    const last = keyStrokes[keyStrokes.length - 1];
+    if (last.correct) {
+      setCombo((c) => c + 1);
+    } else {
+      setCombo(0);
+    }
   }, []);
 
   const handleComplete = useCallback(
@@ -57,14 +67,16 @@ export default function Home() {
     setLiveWpm(0);
     setLiveAccuracy(100);
     setIsActive(false);
+    setElapsed(0);
+    setCombo(0);
     setTextKey((k) => k + 1);
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+    <main className="min-h-screen bg-slate-50 dark:bg-[#0d0d0d] transition-colors">
+      <header className="dark:bg-[#141414] border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm">
         <div className="w-full px-6 sm:px-10 py-3">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+          <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300">
             ⌨️ Typing Trainer
           </h1>
         </div>
@@ -87,6 +99,8 @@ export default function Home() {
           liveWpm={liveWpm}
           liveAccuracy={liveAccuracy}
           isActive={isActive}
+          elapsed={elapsed}
+          combo={combo}
         />
 
         <TypingArea
@@ -99,7 +113,7 @@ export default function Home() {
           <div className="text-center">
             <button
               onClick={handleNext}
-              className="px-8 py-3 text-lg font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 active:bg-indigo-800 transition-colors shadow-sm"
+              className="px-8 py-3 text-lg font-semibold text-black bg-[#00ff88] rounded-xl hover:bg-[#00cc6a] active:bg-[#009e54] transition-colors shadow-sm"
             >
               Next →
             </button>
