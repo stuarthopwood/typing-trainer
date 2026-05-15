@@ -15,8 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Typing Trainer",
-  description: "Learn to type faster with muscle memory drills and passage practice",
+  title: "NeuralKeys",
+  description: "Build neural pathways through keystroke repetition — typing drills and passage practice",
 };
 
 export default function RootLayout({
@@ -25,15 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`} suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(!window.matchMedia('(prefers-color-scheme:dark)').matches){document.documentElement.classList.remove('dark')}}catch(e){}})();`,
-          }}
-        />
-      </head>
-      <body className="min-h-full font-[family-name:var(--font-inter)] bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`}>
+      <body className="min-h-full font-[family-name:var(--font-inter)] bg-slate-50 dark:bg-[#0d0d0d] text-slate-900 dark:text-neutral-200">
         {children}
         <Analytics />
         <SpeedInsights />

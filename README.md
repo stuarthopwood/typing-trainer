@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NeuralKeys
+
+Build neural pathways through keystroke repetition. A web-based typing trainer with progressive drills and curated passages. Dark-themed, zero-latency, mobile-friendly.
+
+**Live:** Deployed on Vercel via `master` branch.
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router, TypeScript)
+- **Styling:** Tailwind CSS v4 (dark-first, custom variant)
+- **Fonts:** Inter (UI) + JetBrains Mono (typing text) via `next/font`
+- **Icons:** Font Awesome (react-fontawesome)
+- **Analytics:** @vercel/analytics + @vercel/speed-insights
+- **Tests:** Vitest + @testing-library/react (41+ tests)
+- **CI:** GitHub Actions — tests + build on every PR
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm test         # Run test suite
+npm run build    # Production build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Training Modes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Key Drill** — Progressive levels from home-row to full keyboard. Uses real words (not random characters) for better muscle memory.
 
-## Learn More
+**Passage** — 80+ curated passages from sci-fi (Expeditionary Force, Dune, Hitchhiker's Guide, Foundation, Neuromancer), fantasy (Discworld, LOTR), movies (Matrix, Interstellar, Blade Runner, Monty Python, Star Wars, Shawshank, Dark Knight), philosophy (Stoics, Nietzsche), science (Feynman, Sagan, Einstein), programming (Python, TypeScript, Rust, Go, SQL, Bash), and more. Filterable by difficulty and category (book/movie/code/quote).
 
-To learn more about Next.js, take a look at the following resources:
+### Visual Keyboard
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+A full Keychron K2 HE (75%) layout rendered below the typing area:
+- Keys flash green/red on press with scale animation
+- Next expected key(s) glow dimly as a guide (including Shift for capitals)
+- Modifiers stay highlighted while held
+- Hidden on mobile — responsive with `clamp()`-based sizing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Progressive Unlocking
 
-## Deploy on Vercel
+Drill levels and passage difficulties are gated behind a progression system:
+- Must complete 5 sessions at 85%+ accuracy to unlock the next level
+- Locked levels show greyed out with a progress counter (e.g., "3/5")
+- First level of each track (home-row, beginner) always unlocked
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### PIN-Based Profiles
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Multi-user support via simple PIN entry:
+- Enter a 4-6 digit PIN on first visit — same PIN = same progress, any device
+- No accounts, no passwords — just type your PIN and go
+- Progress stored as per-user blob in Vercel cloud
+
+### XP & Achievements
+
+RPG-style progression system:
+- Earn XP for completing sessions (base 5 + accuracy bonus)
+- Achievement unlocks for milestones (speed, accuracy, streaks, progression)
+- Level system with exponential XP curve (20 levels)
+- Achievement toasts shown after session completion
+- Level + XP bar displayed in header
+
+### Cloud Persistence
+
+Progress syncs to Vercel Blob after every completed session:
+- Per-user storage keyed by PIN hash
+- Automatic merge on load (local + remote, takes the higher value)
+- API route at `/api/progress` (GET/PUT) protected by shared API key
+- Enables cross-device continuity and access via second-brain agent
+
+### Sound Effects
+
+Optional keyboard sounds (toggle in header):
+- Satisfying click on correct keypress
+- Distinct thud on error
+- Web Audio API — no audio files needed
+
+### UX
+
+- Backspace allowed — original errors stay in history (no accuracy cheating)
+- Caps Lock detection with blocking overlay
+- Enter/Space to advance after completion
+- Celebration tiers with confetti (based on accuracy thresholds)
+- Combo counter for consecutive correct keystrokes
+- INP-optimised — memoized character rendering, minimal DOM updates per keystroke
+
+### Stats
+
+- Live WPM, accuracy, time elapsed, combo counter
+- Stats dashboard with session history
+- localStorage persistence (no backend required)
+
+## Architecture
+
+```
+app/           → Pages (main typing + stats dashboard)
+components/    → TypingArea, StatsDisplay, ModeSelector
+lib/           → Pure functions (engine, drills, passages, progress, celebrations)
+tests/         → Vitest test suite (BDD-style)
+```
+
+## Theme
+
+Razer-inspired dark design: `#0d0d0d` background, `#141414` surfaces, electric green `#00ff88` accents.
+
+## Git Workflow
+
+- `master` — production (auto-deploys to Vercel, branch-protected)
+- `dev` — development (preview deploys)
+- All work on `dev`, merge via PR with CI passing
+
+## Roadmap
+
+- Virtual keyboard overlay with finger positions
+- Progressive level unlocking (95%+ required)
+- WPM graph over time
+- Sound effects (optional)
+- Cross-device sync
+- Light mode toggle

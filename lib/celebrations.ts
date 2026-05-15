@@ -12,9 +12,9 @@ interface Particle {
 }
 
 const COLORS = {
-  good: ["#22c55e", "#16a34a", "#4ade80"],
-  great: ["#f59e0b", "#d97706", "#fbbf24", "#eab308"],
-  perfect: ["#a855f7", "#7c3aed", "#ec4899", "#f43f5e", "#fbbf24", "#22d3ee"],
+  good: ["#00cc6a", "#00ff88", "#4ade80"],
+  great: ["#00ff88", "#00cc6a", "#22d3ee", "#fbbf24"],
+  perfect: ["#00ff88", "#00cc6a", "#22d3ee", "#ffffff", "#fbbf24", "#f43f5e"],
 };
 
 export function createConfetti(
@@ -91,11 +91,11 @@ export function createConfetti(
 export function getGlowClass(tier: CelebrationTier): string {
   switch (tier) {
     case "perfect":
-      return "shadow-[0_0_30px_rgba(168,85,247,0.6)] animate-pulse";
+      return "shadow-[0_0_40px_rgba(0,255,136,0.5)] animate-pulse";
     case "great":
-      return "shadow-[0_0_20px_rgba(245,158,11,0.5)]";
+      return "shadow-[0_0_25px_rgba(0,255,136,0.3)]";
     case "good":
-      return "shadow-[0_0_15px_rgba(34,197,94,0.4)]";
+      return "shadow-[0_0_15px_rgba(0,204,106,0.2)]";
     default:
       return "";
   }

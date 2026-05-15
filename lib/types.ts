@@ -40,3 +40,10 @@ export interface DrillConfig {
 }
 
 export type CelebrationTier = "none" | "good" | "great" | "perfect";
+
+export interface ActiveKeyState {
+  key: string;
+  code: string;
+  correct: boolean | null;
+  timestamp: number;
+}

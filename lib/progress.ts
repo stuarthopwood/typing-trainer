@@ -10,6 +10,9 @@ export interface ProgressData {
   lastSessionDate: string;
   recentSessions: SessionSummary[];
   errorHeatmap: Record<string, number>;
+  levelProgress: Record<string, number>;
+  xp: number;
+  achievements: { id: string; unlockedAt: string }[];
 }
 
 interface SessionSummary {
@@ -27,7 +30,18 @@ export function getProgress(): ProgressData {
   }
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return defaultProgress();
-  return JSON.parse(stored);
+  try {
+    const data = JSON.parse(stored);
+    if (!data || typeof data !== "object" || typeof data.totalSessions !== "number") {
+      return defaultProgress();
+    }
+    if (!data.levelProgress) data.levelProgress = {};
+    if (!data.xp) data.xp = 0;
+    if (!data.achievements) data.achievements = [];
+    return data;
+  } catch {
+    return defaultProgress();
+  }
 }
 
 export function recordSession(stats: SessionStats, mode: string): ProgressData {
@@ -59,6 +73,10 @@ export function recordSession(stats: SessionStats, mode: string): ProgressData {
     ...progress.recentSessions,
   ].slice(0, 20);
 
+  if (stats.accuracy >= 85) {
+    progress.levelProgress[mode] = (progress.levelProgress[mode] || 0) + 1;
+  }
+
   for (const stroke of stats.keyStrokes) {
     if (!stroke.correct) {
       progress.errorHeatmap[stroke.expected] = (progress.errorHeatmap[stroke.expected] || 0) + 1;
@@ -88,5 +106,155 @@ function defaultProgress(): ProgressData {
     lastSessionDate: "",
     recentSessions: [],
     errorHeatmap: {},
+    levelProgress: {},
+    xp: 0,
+    achievements: [],
   };
+}
+
+const UNLOCK_THRESHOLD = 5;
+
+export const DRILL_ORDER: string[] = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
+const DIFFICULTY_ORDER: string[] = ["beginner", "intermediate", "advanced"];
+
+export function getUnlockedDrillLevels(): Set<string> {
+  const progress = getProgress();
+  const unlocked = new Set<string>(["home-row"]);
+  for (let i = 1; i < DRILL_ORDER.length; i++) {
+    const prev = DRILL_ORDER[i - 1];
+    const qualifying = progress.levelProgress[`drill:${prev}`] || 0;
+    if (qualifying >= UNLOCK_THRESHOLD) {
+      unlocked.add(DRILL_ORDER[i]);
+    } else {
+      break;
+    }
+  }
+  return unlocked;
+}
+
+export function getUnlockedDifficulties(): Set<string> {
+  const progress = getProgress();
+  const unlocked = new Set<string>(["beginner"]);
+  for (let i = 1; i < DIFFICULTY_ORDER.length; i++) {
+    const prev = DIFFICULTY_ORDER[i - 1];
+    const qualifying = progress.levelProgress[`passage:${prev}`] || 0;
+    if (qualifying >= UNLOCK_THRESHOLD) {
+      unlocked.add(DIFFICULTY_ORDER[i]);
+    } else {
+      break;
+    }
+  }
+  return unlocked;
+}
+
+export function getLevelQualifyingSessions(mode: string): number {
+  const progress = getProgress();
+  return progress.levelProgress[mode] || 0;
+}
+
+export const UNLOCK_SESSIONS_REQUIRED = UNLOCK_THRESHOLD;
+
+export function getUserPin(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("neuralkeys-pin");
+}
+
+export function setUserPin(pin: string): void {
+  localStorage.setItem("neuralkeys-pin", pin);
+}
+
+export function clearUserPin(): void {
+  localStorage.removeItem("neuralkeys-pin");
+}
+
+export async function syncToRemote(progress: ProgressData): Promise<void> {
+  const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
+  const pin = getUserPin();
+  if (!apiKey || !pin) return;
+  try {
+    await fetch("/api/progress", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "x-user-pin": pin },
+      body: JSON.stringify(progress),
+    });
+  } catch {
+    // Silent fail — local data is the source of truth, remote is backup
+  }
+}
+
+export async function loadFromRemote(): Promise<ProgressData | null> {
+  const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
+  const pin = getUserPin();
+  if (!apiKey || !pin) return null;
+  try {
+    const res = await fetch("/api/progress", {
+      headers: { "x-api-key": apiKey, "x-user-pin": pin },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || !data.totalSessions) return null;
+    if (!data.levelProgress) data.levelProgress = {};
+    if (!data.xp) data.xp = 0;
+    if (!data.achievements) data.achievements = [];
+    return data as ProgressData;
+  } catch {
+    return null;
+  }
+}
+
+export function mergeProgress(local: ProgressData, remote: ProgressData): ProgressData {
+  return {
+    totalSessions: Math.max(local.totalSessions, remote.totalSessions),
+    totalCharsTyped: Math.max(local.totalCharsTyped, remote.totalCharsTyped),
+    bestWpm: Math.max(local.bestWpm, remote.bestWpm),
+    bestAccuracy: Math.max(local.bestAccuracy, remote.bestAccuracy),
+    currentStreak: Math.max(local.currentStreak, remote.currentStreak),
+    bestStreak: Math.max(local.bestStreak, remote.bestStreak),
+    lastSessionDate: local.lastSessionDate > remote.lastSessionDate ? local.lastSessionDate : remote.lastSessionDate,
+    recentSessions: mergeRecentSessions(local.recentSessions, remote.recentSessions),
+    errorHeatmap: mergeHeatmaps(local.errorHeatmap, remote.errorHeatmap),
+    levelProgress: mergeLevelProgress(local.levelProgress, remote.levelProgress),
+    xp: Math.max(local.xp || 0, remote.xp || 0),
+    achievements: mergeAchievements(local.achievements || [], remote.achievements || []),
+  };
+}
+
+function mergeRecentSessions(a: SessionSummary[], b: SessionSummary[]): SessionSummary[] {
+  const seen = new Set<string>();
+  const merged: SessionSummary[] = [];
+  for (const s of [...a, ...b]) {
+    const key = `${s.date}:${s.mode}:${s.wpm}:${s.accuracy}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(s);
+    }
+  }
+  return merged.sort((x, y) => y.date.localeCompare(x.date)).slice(0, 20);
+}
+
+function mergeHeatmaps(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+  const result = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    result[k] = Math.max(result[k] || 0, v);
+  }
+  return result;
+}
+
+function mergeLevelProgress(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+  const result = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    result[k] = Math.max(result[k] || 0, v);
+  }
+  return result;
+}
+
+function mergeAchievements(a: { id: string; unlockedAt: string }[], b: { id: string; unlockedAt: string }[]): { id: string; unlockedAt: string }[] {
+  const map = new Map<string, string>();
+  for (const ach of [...a, ...b]) {
+    const existing = map.get(ach.id);
+    if (!existing || ach.unlockedAt < existing) {
+      map.set(ach.id, ach.unlockedAt);
+    }
+  }
+  return Array.from(map.entries()).map(([id, unlockedAt]) => ({ id, unlockedAt }));
 }

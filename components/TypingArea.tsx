@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback, useState, memo } from "react";
 import type { KeyStroke, CelebrationTier } from "@/lib/types";
 import { getCelebrationTier } from "@/lib/engine";
 import { createConfetti, getGlowClass } from "@/lib/celebrations";
@@ -9,9 +9,10 @@ interface TypingAreaProps {
   text: string;
   onComplete: (keyStrokes: KeyStroke[]) => void;
   onProgress: (position: number, keyStrokes: KeyStroke[]) => void;
+  onKeyPress?: (key: string, code: string, correct: boolean | null) => void;
 }
 
-export default function TypingArea({ text, onComplete, onProgress }: TypingAreaProps) {
+export default function TypingArea({ text, onComplete, onProgress, onKeyPress }: TypingAreaProps) {
   const [position, setPosition] = useState(0);
   const [errors, setErrors] = useState<Set<number>>(new Set());
   const [celebration, setCelebration] = useState<CelebrationTier>("none");
@@ -25,11 +26,15 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
     (e: KeyboardEvent) => {
       setCapsLockOn(e.getModifierState("CapsLock"));
 
-      if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta" || e.key === "CapsLock" || e.key === "Tab" || e.key === "Escape") return;
+      if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta" || e.key === "CapsLock" || e.key === "Tab" || e.key === "Escape") {
+        onKeyPress?.(e.key, e.code, null);
+        return;
+      }
 
       e.preventDefault();
 
       if (e.key === "Backspace") {
+        onKeyPress?.(e.key, e.code, null);
         if (position > 0) {
           const newPos = position - 1;
           setPosition(newPos);
@@ -38,8 +43,6 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
             next.delete(newPos);
             return next;
           });
-          keyStrokesRef.current.pop();
-          onProgress(newPos, keyStrokesRef.current);
         }
         return;
       }
@@ -58,6 +61,7 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
       };
 
       keyStrokesRef.current.push(stroke);
+      onKeyPress?.(e.key, e.code, correct);
 
       if (!correct) {
         setErrors((prev) => new Set(prev).add(position));
@@ -83,7 +87,7 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
         onComplete(keyStrokesRef.current);
       }
     },
-    [position, text, onComplete, onProgress]
+    [position, text, onComplete, onProgress, onKeyPress]
   );
 
   useEffect(() => {
@@ -91,17 +95,19 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setPosition(0);
     setErrors(new Set());
     keyStrokesRef.current = [];
     setCelebration("none");
   }, [text]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" tabIndex={0} role="application" aria-label="Typing area — type the displayed text">
       {capsLockOn && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-red-900/80 rounded-2xl backdrop-blur-sm">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-red-900/80 rounded-2xl backdrop-blur-sm" role="alert" aria-live="assertive">
           <div className="text-center p-8">
             <div className="text-5xl mb-4">⚠️</div>
             <h2 className="text-2xl font-bold text-white mb-2">Caps Lock is ON</h2>
@@ -114,32 +120,33 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
         className="absolute inset-0 w-full h-full pointer-events-none z-10"
       />
       <div
-        className={`p-8 sm:p-10 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 transition-all duration-300 ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out] border-red-400 dark:border-red-500" : ""}`}
+        className={`p-8 sm:p-12 transition-all duration-300 ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out]" : ""}`}
       >
-        <p className="text-2xl sm:text-3xl md:text-4xl leading-relaxed tracking-wide whitespace-pre-wrap select-none font-[family-name:var(--font-jetbrains)]">
-          {text.split("").map((char, i) => {
-            let className = "text-slate-300 dark:text-slate-600";
-            if (i < position) {
-              className = errors.has(i)
-                ? "text-red-500 bg-red-200 dark:bg-red-900/50 rounded px-0.5 line-through decoration-2"
-                : "text-emerald-600 dark:text-emerald-400";
-            } else if (i === position) {
-              className =
-                "text-slate-900 dark:text-white bg-indigo-200 dark:bg-indigo-700/60 rounded px-0.5 border-b-3 border-indigo-500";
-            }
-            return (
-              <span key={i} className={className}>
-                {char === "\n" ? "↵\n" : char === " " && i === position ? "·" : char}
-              </span>
-            );
-          })}
+        <p className="text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap select-none text-center font-[family-name:var(--font-inter)]">
+          {text.split("").map((char, i) => (
+            <Char
+              key={i}
+              char={char}
+              state={i < position ? (errors.has(i) ? "error" : "correct") : i === position ? "active" : "pending"}
+            />
+          ))}
         </p>
       </div>
-      {position === 0 && (
-        <p className="text-center text-base text-slate-400 dark:text-slate-500 mt-4">
-          Start typing to begin...
-        </p>
-      )}
     </div>
   );
 }
+
+const Char = memo(function Char({ char, state }: { char: string; state: "pending" | "active" | "correct" | "error" }) {
+  const className =
+    state === "error"
+      ? "text-red-400 line-through decoration-2 decoration-red-500/80"
+      : state === "correct"
+        ? "text-[#00ff88]/80"
+        : state === "active"
+          ? "text-white bg-[#00ff88]/15 rounded-sm border-b-2 border-[#00ff88] shadow-[0_0_8px_rgba(0,255,136,0.3)] animate-[pulse_2s_ease-in-out_infinite]"
+          : "text-neutral-500";
+
+  const display = char === "\n" ? "↵\n" : state === "active" && char === " " ? "·" : char;
+
+  return <span className={className}>{display}</span>;
+});
