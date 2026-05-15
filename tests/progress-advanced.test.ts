@@ -36,6 +36,7 @@ describe("Progress — mergeProgress", () => {
     levelProgress: {},
     xp: 0,
     achievements: [],
+    tips: [],
   };
 
   it("should take the max of numeric fields", () => {

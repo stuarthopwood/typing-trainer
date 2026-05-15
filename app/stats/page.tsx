@@ -110,6 +110,24 @@ export default function StatsPage() {
             </div>
           </div>
         )}
+
+        {/* AI Tips */}
+        {progress.tips && progress.tips.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">AI Tips</h2>
+            <div className="space-y-2">
+              {progress.tips.slice(0, 10).map((tip, i) => (
+                <div key={i} className="flex items-start gap-2 px-4 py-2 rounded-lg bg-neutral-800/30">
+                  <span className="text-amber-400 mt-0.5">💡</span>
+                  <div>
+                    <p className="text-sm text-neutral-300">{tip.text}</p>
+                    <p className="text-xs text-neutral-600">{tip.createdAt.split("T")[0]}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
