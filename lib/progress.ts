@@ -11,6 +11,8 @@ export interface ProgressData {
   recentSessions: SessionSummary[];
   errorHeatmap: Record<string, number>;
   levelProgress: Record<string, number>;
+  xp: number;
+  achievements: { id: string; unlockedAt: string }[];
 }
 
 interface SessionSummary {
@@ -30,6 +32,8 @@ export function getProgress(): ProgressData {
   if (!stored) return defaultProgress();
   const data = JSON.parse(stored);
   if (!data.levelProgress) data.levelProgress = {};
+  if (!data.xp) data.xp = 0;
+  if (!data.achievements) data.achievements = [];
   return data;
 }
 
@@ -96,6 +100,8 @@ function defaultProgress(): ProgressData {
     recentSessions: [],
     errorHeatmap: {},
     levelProgress: {},
+    xp: 0,
+    achievements: [],
   };
 }
 
@@ -141,13 +147,27 @@ export function getLevelQualifyingSessions(mode: string): number {
 
 export const UNLOCK_SESSIONS_REQUIRED = UNLOCK_THRESHOLD;
 
+export function getUserPin(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("neuralkeys-pin");
+}
+
+export function setUserPin(pin: string): void {
+  localStorage.setItem("neuralkeys-pin", pin);
+}
+
+export function clearUserPin(): void {
+  localStorage.removeItem("neuralkeys-pin");
+}
+
 export async function syncToRemote(progress: ProgressData): Promise<void> {
   const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
-  if (!apiKey) return;
+  const pin = getUserPin();
+  if (!apiKey || !pin) return;
   try {
     await fetch("/api/progress", {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "x-user-pin": pin },
       body: JSON.stringify(progress),
     });
   } catch {
@@ -157,15 +177,18 @@ export async function syncToRemote(progress: ProgressData): Promise<void> {
 
 export async function loadFromRemote(): Promise<ProgressData | null> {
   const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
-  if (!apiKey) return null;
+  const pin = getUserPin();
+  if (!apiKey || !pin) return null;
   try {
     const res = await fetch("/api/progress", {
-      headers: { "x-api-key": apiKey },
+      headers: { "x-api-key": apiKey, "x-user-pin": pin },
     });
     if (!res.ok) return null;
     const data = await res.json();
     if (!data || !data.totalSessions) return null;
     if (!data.levelProgress) data.levelProgress = {};
+    if (!data.xp) data.xp = 0;
+    if (!data.achievements) data.achievements = [];
     return data as ProgressData;
   } catch {
     return null;
@@ -184,6 +207,8 @@ export function mergeProgress(local: ProgressData, remote: ProgressData): Progre
     recentSessions: mergeRecentSessions(local.recentSessions, remote.recentSessions),
     errorHeatmap: mergeHeatmaps(local.errorHeatmap, remote.errorHeatmap),
     levelProgress: mergeLevelProgress(local.levelProgress, remote.levelProgress),
+    xp: Math.max(local.xp || 0, remote.xp || 0),
+    achievements: mergeAchievements(local.achievements || [], remote.achievements || []),
   };
 }
 
@@ -214,4 +239,15 @@ function mergeLevelProgress(a: Record<string, number>, b: Record<string, number>
     result[k] = Math.max(result[k] || 0, v);
   }
   return result;
+}
+
+function mergeAchievements(a: { id: string; unlockedAt: string }[], b: { id: string; unlockedAt: string }[]): { id: string; unlockedAt: string }[] {
+  const map = new Map<string, string>();
+  for (const ach of [...a, ...b]) {
+    const existing = map.get(ach.id);
+    if (!existing || ach.unlockedAt < existing) {
+      map.set(ach.id, ach.unlockedAt);
+    }
+  }
+  return Array.from(map.entries()).map(([id, unlockedAt]) => ({ id, unlockedAt }));
 }

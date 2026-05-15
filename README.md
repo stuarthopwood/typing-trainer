@@ -46,12 +46,36 @@ Drill levels and passage difficulties are gated behind a progression system:
 - Locked levels show greyed out with a progress counter (e.g., "3/5")
 - First level of each track (home-row, beginner) always unlocked
 
+### PIN-Based Profiles
+
+Multi-user support via simple PIN entry:
+- Enter a 4-6 digit PIN on first visit — same PIN = same progress, any device
+- No accounts, no passwords — just type your PIN and go
+- Progress stored as per-user blob in Vercel cloud
+
+### XP & Achievements
+
+RPG-style progression system:
+- Earn XP for completing sessions (base 5 + accuracy bonus)
+- Achievement unlocks for milestones (speed, accuracy, streaks, progression)
+- Level system with exponential XP curve (20 levels)
+- Achievement toasts shown after session completion
+- Level + XP bar displayed in header
+
 ### Cloud Persistence
 
 Progress syncs to Vercel Blob after every completed session:
+- Per-user storage keyed by PIN hash
 - Automatic merge on load (local + remote, takes the higher value)
 - API route at `/api/progress` (GET/PUT) protected by shared API key
 - Enables cross-device continuity and access via second-brain agent
+
+### Sound Effects
+
+Optional keyboard sounds (toggle in header):
+- Satisfying click on correct keypress
+- Distinct thud on error
+- Web Audio API — no audio files needed
 
 ### UX
 

@@ -104,7 +104,7 @@ export default function ModeSelector({
           />
         </button>
         {mode === "passage" && !unlockedDifficulties.has(DIFFICULTIES[difficultyIndex + 1]) && difficultyIndex < 2 && (
-          <span className="text-[0.6rem] text-neutral-600">
+          <span className="text-xs text-neutral-600">
             {difficultyProgress[passageDifficulty] ?? 0}/{unlockThreshold}
           </span>
         )}
@@ -120,7 +120,7 @@ export default function ModeSelector({
               <button
                 key={level}
                 onClick={() => unlocked && onDrillLevelChange(level)}
-                className={`px-2.5 py-1 text-xs rounded-md transition-all flex items-center gap-1 ${
+                className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 ${
                   !unlocked
                     ? "text-neutral-700 cursor-not-allowed"
                     : drillLevel === level
@@ -131,7 +131,7 @@ export default function ModeSelector({
               >
                 {!unlocked && <FontAwesomeIcon icon={faLock} className="w-2.5 h-2.5" />}
                 {level.replace("-", " ")}
-                {!unlocked && <span className="text-[0.6rem] text-neutral-600">{progress}/{unlockThreshold}</span>}
+                {!unlocked && <span className="text-xs text-neutral-600">{progress}/{unlockThreshold}</span>}
               </button>
             );
           })}
@@ -144,7 +144,7 @@ export default function ModeSelector({
             <button
               key={c}
               onClick={() => onCategoryChange(c)}
-              className={`px-2.5 py-1 text-xs rounded-md transition-all ${
+              className={`px-3 py-1.5 text-sm rounded-md transition-all ${
                 passageCategory === c
                   ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
                   : "text-neutral-500 hover:text-neutral-300"

@@ -49,7 +49,7 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <div className="w-full px-6 sm:px-10 py-8 space-y-10 max-w-3xl mx-auto">
+      <div className="w-full px-6 sm:px-10 py-8 space-y-10">
         {/* Overview */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           <BigStat icon={faKeyboard} value={progress.totalSessions} label="Sessions" />

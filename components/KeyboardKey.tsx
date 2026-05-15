@@ -41,7 +41,7 @@ export default memo(function KeyboardKey({ keyDef, isActive, isCorrect, isExpect
 
   return (
     <div
-      className={`flex items-center justify-center rounded-md border font-[family-name:var(--font-jetbrains)] text-[0.6rem] leading-none select-none transition-all duration-100 ${stateClasses}`}
+      className={`flex items-center justify-center rounded-md border font-[family-name:var(--font-jetbrains)] text-[0.7rem] leading-none select-none transition-all duration-100 ${stateClasses}`}
       style={{
         width: `calc(var(--key-unit) * ${width})`,
         height: "var(--key-unit)",
@@ -49,7 +49,7 @@ export default memo(function KeyboardKey({ keyDef, isActive, isCorrect, isExpect
     >
       {keyDef.labelShifted ? (
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-[0.5rem] opacity-60">{keyDef.labelShifted}</span>
+          <span className="text-[0.55rem] opacity-60">{keyDef.labelShifted}</span>
           <span>{keyDef.label}</span>
         </div>
       ) : (

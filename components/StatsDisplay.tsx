@@ -57,7 +57,7 @@ export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, e
         )}
       </div>
       {(sessionAvgWpm !== undefined || allTimeBestWpm !== undefined) && (
-        <div className="flex items-center justify-center gap-8 text-[0.65rem] text-neutral-500">
+        <div className="flex items-center justify-center gap-8 text-xs text-neutral-500">
           {sessionAvgWpm !== undefined && (
             <span>Session avg: <strong className="text-neutral-400">{sessionAvgWpm} WPM</strong> / <strong className="text-neutral-400">{sessionAvgAccuracy}%</strong></span>
           )}
