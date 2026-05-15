@@ -29,7 +29,7 @@ npm run build    # Production build
 
 **Key Drill** — Progressive levels from home-row to full keyboard. Uses real words (not random characters) for better muscle memory.
 
-**Passage** — Curated quotes from sci-fi, fantasy, comedy, and code. Filterable by difficulty and category.
+**Passage** — 80+ curated passages from sci-fi (Expeditionary Force, Dune, Hitchhiker's Guide, Foundation, Neuromancer), fantasy (Discworld, LOTR), movies (Matrix, Interstellar, Blade Runner, Monty Python, Star Wars, Shawshank, Dark Knight), philosophy (Stoics, Nietzsche), science (Feynman, Sagan, Einstein), programming (Python, TypeScript, Rust, Go, SQL, Bash), and more. Filterable by difficulty and category (book/movie/code/quote).
 
 ### Visual Keyboard
 
@@ -45,6 +45,13 @@ Drill levels and passage difficulties are gated behind a progression system:
 - Must complete 5 sessions at 85%+ accuracy to unlock the next level
 - Locked levels show greyed out with a progress counter (e.g., "3/5")
 - First level of each track (home-row, beginner) always unlocked
+
+### Cloud Persistence
+
+Progress syncs to Vercel Blob after every completed session:
+- Automatic merge on load (local + remote, takes the higher value)
+- API route at `/api/progress` (GET/PUT) protected by shared API key
+- Enables cross-device continuity and access via second-brain agent
 
 ### UX
 

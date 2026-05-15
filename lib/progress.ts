@@ -140,3 +140,78 @@ export function getLevelQualifyingSessions(mode: string): number {
 }
 
 export const UNLOCK_SESSIONS_REQUIRED = UNLOCK_THRESHOLD;
+
+export async function syncToRemote(progress: ProgressData): Promise<void> {
+  const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
+  if (!apiKey) return;
+  try {
+    await fetch("/api/progress", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify(progress),
+    });
+  } catch {
+    // Silent fail — local data is the source of truth, remote is backup
+  }
+}
+
+export async function loadFromRemote(): Promise<ProgressData | null> {
+  const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch("/api/progress", {
+      headers: { "x-api-key": apiKey },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || !data.totalSessions) return null;
+    if (!data.levelProgress) data.levelProgress = {};
+    return data as ProgressData;
+  } catch {
+    return null;
+  }
+}
+
+export function mergeProgress(local: ProgressData, remote: ProgressData): ProgressData {
+  return {
+    totalSessions: Math.max(local.totalSessions, remote.totalSessions),
+    totalCharsTyped: Math.max(local.totalCharsTyped, remote.totalCharsTyped),
+    bestWpm: Math.max(local.bestWpm, remote.bestWpm),
+    bestAccuracy: Math.max(local.bestAccuracy, remote.bestAccuracy),
+    currentStreak: Math.max(local.currentStreak, remote.currentStreak),
+    bestStreak: Math.max(local.bestStreak, remote.bestStreak),
+    lastSessionDate: local.lastSessionDate > remote.lastSessionDate ? local.lastSessionDate : remote.lastSessionDate,
+    recentSessions: mergeRecentSessions(local.recentSessions, remote.recentSessions),
+    errorHeatmap: mergeHeatmaps(local.errorHeatmap, remote.errorHeatmap),
+    levelProgress: mergeLevelProgress(local.levelProgress, remote.levelProgress),
+  };
+}
+
+function mergeRecentSessions(a: SessionSummary[], b: SessionSummary[]): SessionSummary[] {
+  const seen = new Set<string>();
+  const merged: SessionSummary[] = [];
+  for (const s of [...a, ...b]) {
+    const key = `${s.date}:${s.mode}:${s.wpm}:${s.accuracy}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(s);
+    }
+  }
+  return merged.sort((x, y) => y.date.localeCompare(x.date)).slice(0, 20);
+}
+
+function mergeHeatmaps(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+  const result = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    result[k] = Math.max(result[k] || 0, v);
+  }
+  return result;
+}
+
+function mergeLevelProgress(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
+  const result = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    result[k] = Math.max(result[k] || 0, v);
+  }
+  return result;
+}

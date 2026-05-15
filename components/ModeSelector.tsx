@@ -140,7 +140,7 @@ export default function ModeSelector({
 
       {mode === "passage" && (
         <div className="flex flex-wrap gap-1">
-          {(["all", "book", "movie", "code"] as (Passage["category"] | "all")[]).map((c) => (
+          {(["all", "book", "movie", "code", "quote"] as (Passage["category"] | "all")[]).map((c) => (
             <button
               key={c}
               onClick={() => onCategoryChange(c)}

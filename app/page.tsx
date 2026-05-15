@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartBar, faKeyboard } from "@fortawesome/free-solid-svg-icons";
+import { faChartLine, faKeyboard } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
 import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
@@ -11,7 +11,7 @@ import VisualKeyboard from "@/components/VisualKeyboard";
 import { buildSessionStats, calculateWpm, calculateAccuracy } from "@/lib/engine";
 import { generateDrillText, DRILL_LEVELS } from "@/lib/drills";
 import { getRandomPassage } from "@/lib/passages";
-import { recordSession, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED } from "@/lib/progress";
+import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress } from "@/lib/progress";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState } from "@/lib/types";
 
 export default function Home() {
@@ -31,34 +31,38 @@ export default function Home() {
   const [unlockVersion, setUnlockVersion] = useState(0);
   const activeKeyTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
-  const unlockedDrillLevels = useMemo(() => getUnlockedDrillLevels(), [unlockVersion]);
-  const unlockedDifficulties = useMemo(() => getUnlockedDifficulties(), [unlockVersion]);
-  const drillProgress = useMemo(() => {
+  const [unlockedDrillLevels, setUnlockedDrillLevels] = useState<Set<string>>(new Set(["home-row"]));
+  const [unlockedDifficulties, setUnlockedDifficulties] = useState<Set<string>>(new Set(["beginner"]));
+  const [drillProgress, setDrillProgress] = useState<Record<string, number>>({});
+  const [difficultyProgress, setDifficultyProgress] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setUnlockedDrillLevels(getUnlockedDrillLevels());
+    setUnlockedDifficulties(getUnlockedDifficulties());
     const levels = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
-    const result: Record<string, number> = {};
-    for (const l of levels) result[l] = getLevelQualifyingSessions(`drill:${l}`);
-    return result;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unlockVersion]);
-  const difficultyProgress = useMemo(() => {
+    const dp: Record<string, number> = {};
+    for (const l of levels) dp[l] = getLevelQualifyingSessions(`drill:${l}`);
+    setDrillProgress(dp);
     const diffs = ["beginner", "intermediate", "advanced"];
-    const result: Record<string, number> = {};
-    for (const d of diffs) result[d] = getLevelQualifyingSessions(`passage:${d}`);
-    return result;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const dfp: Record<string, number> = {};
+    for (const d of diffs) dfp[d] = getLevelQualifyingSessions(`passage:${d}`);
+    setDifficultyProgress(dfp);
   }, [unlockVersion]);
 
-  const currentPassage = useMemo(() => {
+  const [currentPassage, setCurrentPassage] = useState<{ text: string; source: string }>({ text: "", source: "" });
+  const currentText = currentPassage.text;
+
+  useEffect(() => {
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
-      return { text: generateDrillText(config), source: "" };
+      setCurrentPassage({ text: generateDrillText(config), source: "" });
+    } else {
+      const cat = passageCategory === "all" ? undefined : passageCategory;
+      const passage = getRandomPassage(passageDifficulty, cat);
+      setCurrentPassage({ text: passage.text, source: passage.source });
     }
-    const cat = passageCategory === "all" ? undefined : passageCategory;
-    const passage = getRandomPassage(passageDifficulty, cat);
-    return { text: passage.text, source: passage.source };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, drillLevel, passageDifficulty, passageCategory, textKey]);
-  const currentText = currentPassage.text;
 
   const handleProgress = useCallback((pos: number, keyStrokes: KeyStroke[]) => {
     setPosition(pos);
@@ -80,13 +84,25 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    loadFromRemote().then((remote) => {
+      if (remote) {
+        const local = getProgress();
+        const merged = mergeProgress(local, remote);
+        localStorage.setItem("typing-trainer-progress", JSON.stringify(merged));
+        setUnlockVersion((v) => v + 1);
+      }
+    });
+  }, []);
+
   const handleComplete = useCallback(
     (keyStrokes: KeyStroke[]) => {
       const stats = buildSessionStats(keyStrokes);
       setSessionStats(stats);
       setIsActive(false);
-      recordSession(stats, mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`);
+      const updated = recordSession(stats, mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`);
       setUnlockVersion((v) => v + 1);
+      syncToRemote(updated);
     },
     [mode, drillLevel, passageDifficulty]
   );
@@ -139,7 +155,7 @@ export default function Home() {
             Typing Trainer
           </h1>
           <Link href="/stats" className="text-neutral-400 hover:text-[#00ff88] transition-colors" title="Stats">
-            <FontAwesomeIcon icon={faChartBar} className="w-5 h-5" />
+            <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
           </Link>
         </div>
       </header>
@@ -167,7 +183,14 @@ export default function Home() {
           onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
         />
 
-        {isActive && (
+        <LevelProgress
+          mode={mode}
+          qualifying={mode === "drill" ? (drillProgress[drillLevel] ?? 0) : (difficultyProgress[passageDifficulty] ?? 0)}
+          threshold={UNLOCK_SESSIONS_REQUIRED}
+          label={mode === "drill" ? drillLevel.replace("-", " ") : passageDifficulty}
+        />
+
+        {(isActive || sessionStats) && (
           <StatsDisplay
             stats={sessionStats}
             liveWpm={liveWpm}
@@ -185,6 +208,17 @@ export default function Home() {
           onKeyPress={handleKeyPress}
         />
 
+        {sessionStats && (
+          <div className="text-center">
+            <button
+              onClick={handleNext}
+              className="px-8 py-3 text-lg font-semibold text-black bg-[#00ff88] rounded-xl hover:bg-[#00cc6a] active:bg-[#009e54] transition-colors shadow-sm"
+            >
+              Next →
+            </button>
+          </div>
+        )}
+
         <VisualKeyboard
           activeKey={activeKey}
           nextExpectedKey={position < currentText.length ? currentText[position] : null}
@@ -197,5 +231,31 @@ export default function Home() {
         )}
       </div>
     </main>
+  );
+}
+
+function LevelProgress({ mode, qualifying, threshold, label }: { mode: TrainingMode; qualifying: number; threshold: number; label: string }) {
+  const capped = Math.min(qualifying, threshold);
+  const isMaxed = capped >= threshold;
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-neutral-500 capitalize">{label}</span>
+      <div className="flex gap-1">
+        {Array.from({ length: threshold }, (_, i) => (
+          <div
+            key={i}
+            className={`w-2 h-2 rounded-full transition-colors ${
+              i < capped
+                ? isMaxed ? "bg-[#00ff88]" : "bg-[#00ff88]/60"
+                : "bg-neutral-700"
+            }`}
+          />
+        ))}
+      </div>
+      <span className="text-[0.6rem] text-neutral-600">
+        {isMaxed ? "complete" : `${capped}/${threshold}`}
+      </span>
+    </div>
   );
 }

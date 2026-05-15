@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartBar } from "@fortawesome/free-solid-svg-icons";
 import { getProgress, type ProgressData } from "@/lib/progress";
+import KeyboardHeatmap from "@/components/KeyboardHeatmap";
 
 export default function StatsPage() {
   const [progress, setProgress] = useState<ProgressData | null>(null);
@@ -81,23 +82,11 @@ export default function StatsPage() {
           </p>
         </div>
 
-        {/* Error Heatmap */}
+        {/* Error Heatmap Keyboard */}
         {topErrors.length > 0 && (
           <div className="space-y-3">
-            <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Most Missed Keys</h2>
-            <div className="flex flex-wrap justify-center gap-2">
-              {topErrors.map(([key, count]) => (
-                <div
-                  key={key}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-800/50"
-                >
-                  <span className="font-mono text-lg text-red-400 font-bold">
-                    {key === " " ? "⎵" : key}
-                  </span>
-                  <span className="text-xs text-neutral-500">{count}×</span>
-                </div>
-              ))}
-            </div>
+            <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Error Heatmap</h2>
+            <KeyboardHeatmap errorHeatmap={progress.errorHeatmap} />
           </div>
         )}
 
