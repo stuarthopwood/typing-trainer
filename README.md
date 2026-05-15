@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Typing Trainer
+
+A web-based typing trainer built to improve speed and accuracy through progressive drills and curated passages. Dark-themed, zero-latency, mobile-friendly.
+
+**Live:** Deployed on Vercel via `master` branch.
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router, TypeScript)
+- **Styling:** Tailwind CSS v4 (dark-first, custom variant)
+- **Fonts:** Inter (UI) + JetBrains Mono (typing text) via `next/font`
+- **Icons:** Font Awesome (react-fontawesome)
+- **Analytics:** @vercel/analytics + @vercel/speed-insights
+- **Tests:** Vitest + @testing-library/react (41+ tests)
+- **CI:** GitHub Actions — tests + build on every PR
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm test         # Run test suite
+npm run build    # Production build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Training Modes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Key Drill** — Progressive levels from home-row to full keyboard. Uses real words (not random characters) for better muscle memory.
 
-## Learn More
+**Passage** — Curated quotes from sci-fi, fantasy, comedy, and code. Filterable by difficulty and category.
 
-To learn more about Next.js, take a look at the following resources:
+### Visual Keyboard
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+A full Keychron K2 HE (75%) layout rendered below the typing area:
+- Keys flash green/red on press with scale animation
+- Next expected key(s) glow dimly as a guide (including Shift for capitals)
+- Modifiers stay highlighted while held
+- Hidden on mobile — responsive with `clamp()`-based sizing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### UX
 
-## Deploy on Vercel
+- Backspace allowed — original errors stay in history (no accuracy cheating)
+- Caps Lock detection with blocking overlay
+- Enter/Space to advance after completion
+- Celebration tiers with confetti (based on accuracy thresholds)
+- Combo counter for consecutive correct keystrokes
+- INP-optimised — memoized character rendering, minimal DOM updates per keystroke
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Stats
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Live WPM, accuracy, time elapsed, combo counter
+- Stats dashboard with session history
+- localStorage persistence (no backend required)
+
+## Architecture
+
+```
+app/           → Pages (main typing + stats dashboard)
+components/    → TypingArea, StatsDisplay, ModeSelector
+lib/           → Pure functions (engine, drills, passages, progress, celebrations)
+tests/         → Vitest test suite (BDD-style)
+```
+
+## Theme
+
+Razer-inspired dark design: `#0d0d0d` background, `#141414` surfaces, electric green `#00ff88` accents.
+
+## Git Workflow
+
+- `master` — production (auto-deploys to Vercel, branch-protected)
+- `dev` — development (preview deploys)
+- All work on `dev`, merge via PR with CI passing
+
+## Roadmap
+
+- Virtual keyboard overlay with finger positions
+- Progressive level unlocking (95%+ required)
+- WPM graph over time
+- Sound effects (optional)
+- Cross-device sync
+- Light mode toggle

@@ -9,9 +9,10 @@ interface TypingAreaProps {
   text: string;
   onComplete: (keyStrokes: KeyStroke[]) => void;
   onProgress: (position: number, keyStrokes: KeyStroke[]) => void;
+  onKeyPress?: (key: string, code: string, correct: boolean | null) => void;
 }
 
-export default function TypingArea({ text, onComplete, onProgress }: TypingAreaProps) {
+export default function TypingArea({ text, onComplete, onProgress, onKeyPress }: TypingAreaProps) {
   const [position, setPosition] = useState(0);
   const [errors, setErrors] = useState<Set<number>>(new Set());
   const [celebration, setCelebration] = useState<CelebrationTier>("none");
@@ -25,11 +26,15 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
     (e: KeyboardEvent) => {
       setCapsLockOn(e.getModifierState("CapsLock"));
 
-      if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta" || e.key === "CapsLock" || e.key === "Tab" || e.key === "Escape") return;
+      if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta" || e.key === "CapsLock" || e.key === "Tab" || e.key === "Escape") {
+        onKeyPress?.(e.key, e.code, null);
+        return;
+      }
 
       e.preventDefault();
 
       if (e.key === "Backspace") {
+        onKeyPress?.(e.key, e.code, null);
         if (position > 0) {
           const newPos = position - 1;
           setPosition(newPos);
@@ -56,6 +61,7 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
       };
 
       keyStrokesRef.current.push(stroke);
+      onKeyPress?.(e.key, e.code, correct);
 
       if (!correct) {
         setErrors((prev) => new Set(prev).add(position));
@@ -81,7 +87,7 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
         onComplete(keyStrokesRef.current);
       }
     },
-    [position, text, onComplete, onProgress]
+    [position, text, onComplete, onProgress, onKeyPress]
   );
 
   useEffect(() => {
@@ -124,11 +130,6 @@ export default function TypingArea({ text, onComplete, onProgress }: TypingAreaP
           ))}
         </p>
       </div>
-      {position === 0 && (
-        <p className="text-center text-base text-slate-400 dark:text-slate-500 mt-4">
-          Start typing to begin...
-        </p>
-      )}
     </div>
   );
 }

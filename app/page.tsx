@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartBar, faKeyboard } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
 import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
+import VisualKeyboard from "@/components/VisualKeyboard";
 import { buildSessionStats, calculateWpm, calculateAccuracy } from "@/lib/engine";
 import { generateDrillText, DRILL_LEVELS } from "@/lib/drills";
 import { getRandomPassage } from "@/lib/passages";
 import { recordSession } from "@/lib/progress";
-import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage } from "@/lib/types";
+import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState } from "@/lib/types";
 
 export default function Home() {
   const [mode, setMode] = useState<TrainingMode>("passage");
@@ -25,6 +26,9 @@ export default function Home() {
   const [elapsed, setElapsed] = useState(0);
   const [combo, setCombo] = useState(0);
   const [textKey, setTextKey] = useState(0);
+  const [activeKey, setActiveKey] = useState<ActiveKeyState | null>(null);
+  const [position, setPosition] = useState(0);
+  const activeKeyTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   const currentText = useMemo(() => {
     if (mode === "drill") {
@@ -36,7 +40,8 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, drillLevel, passageDifficulty, passageCategory, textKey]);
 
-  const handleProgress = useCallback((position: number, keyStrokes: KeyStroke[]) => {
+  const handleProgress = useCallback((pos: number, keyStrokes: KeyStroke[]) => {
+    setPosition(pos);
     if (keyStrokes.length < 2) {
       setIsActive(true);
       return;
@@ -73,7 +78,25 @@ export default function Home() {
     setElapsed(0);
     setCombo(0);
     setTextKey((k) => k + 1);
+    setPosition(0);
   }, []);
+
+  const handleKeyPress = useCallback((key: string, code: string, correct: boolean | null) => {
+    clearTimeout(activeKeyTimeoutRef.current);
+    setActiveKey({ key, code, correct, timestamp: performance.now() });
+    activeKeyTimeoutRef.current = setTimeout(() => setActiveKey(null), 150);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (activeKey?.code === e.code) {
+        clearTimeout(activeKeyTimeoutRef.current);
+        setActiveKey(null);
+      }
+    };
+    window.addEventListener("keyup", handleKeyUp);
+    return () => window.removeEventListener("keyup", handleKeyUp);
+  }, [activeKey]);
 
   useEffect(() => {
     const handleEnterForNext = (e: KeyboardEvent) => {
@@ -100,6 +123,12 @@ export default function Home() {
         </div>
       </header>
 
+      {position === 0 && !isActive && (
+        <div className="w-full px-6 sm:px-10 pt-3 flex justify-end">
+          <p className="text-sm text-slate-400 dark:text-slate-500">Start typing to begin...</p>
+        </div>
+      )}
+
       <div className="w-full px-6 sm:px-10 py-8 space-y-10">
         <ModeSelector
           mode={mode}
@@ -125,18 +154,13 @@ export default function Home() {
           text={currentText}
           onComplete={handleComplete}
           onProgress={handleProgress}
+          onKeyPress={handleKeyPress}
         />
 
-        {sessionStats && (
-          <div className="text-center">
-            <button
-              onClick={handleNext}
-              className="px-8 py-3 text-lg font-semibold text-black bg-[#00ff88] rounded-xl hover:bg-[#00cc6a] active:bg-[#009e54] transition-colors shadow-sm"
-            >
-              Next →
-            </button>
-          </div>
-        )}
+        <VisualKeyboard
+          activeKey={activeKey}
+          nextExpectedKey={position < currentText.length ? currentText[position] : null}
+        />
 
         {mode === "passage" && !sessionStats && (
           <p className="text-center text-xs text-slate-400 dark:text-slate-500">
