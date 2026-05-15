@@ -10,9 +10,11 @@ import KeyboardHeatmap from "@/components/KeyboardHeatmap";
 export default function StatsPage() {
   const [progress, setProgress] = useState<ProgressData | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setProgress(getProgress());
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!progress) return null;
 

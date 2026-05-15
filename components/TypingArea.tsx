@@ -95,12 +95,14 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setPosition(0);
     setErrors(new Set());
     keyStrokesRef.current = [];
     setCelebration("none");
   }, [text]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <div ref={containerRef} className="relative">

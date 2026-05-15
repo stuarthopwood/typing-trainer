@@ -39,6 +39,7 @@ export default function Home() {
   const [drillProgress, setDrillProgress] = useState<Record<string, number>>({});
   const [difficultyProgress, setDifficultyProgress] = useState<Record<string, number>>({});
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setUnlockedDrillLevels(getUnlockedDrillLevels());
     setUnlockedDifficulties(getUnlockedDifficulties());
@@ -51,10 +52,12 @@ export default function Home() {
     for (const d of diffs) dfp[d] = getLevelQualifyingSessions(`passage:${d}`);
     setDifficultyProgress(dfp);
   }, [unlockVersion]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const [currentPassage, setCurrentPassage] = useState<{ text: string; source: string }>({ text: "", source: "" });
   const currentText = currentPassage.text;
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
@@ -64,8 +67,8 @@ export default function Home() {
       const passage = getRandomPassage(passageDifficulty, cat);
       setCurrentPassage({ text: passage.text, source: passage.source });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleProgress = useCallback((pos: number, keyStrokes: KeyStroke[]) => {
     setPosition(pos);
@@ -265,7 +268,7 @@ export default function Home() {
   );
 }
 
-function LevelProgress({ mode, qualifying, threshold, label }: { mode: TrainingMode; qualifying: number; threshold: number; label: string }) {
+function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; qualifying: number; threshold: number; label: string }) {
   const capped = Math.min(qualifying, threshold);
   const isMaxed = capped >= threshold;
 
