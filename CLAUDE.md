@@ -1,10 +1,10 @@
 @AGENTS.md
 
-# Typing Trainer — Project Context
+# NeuralKeys — Project Context
 
 ## What This Is
 
-A web-based typing trainer app built by Stuart Hopwood as a personal project to improve typing speed and accuracy. Deployed on Vercel.
+NeuralKeys — a web-based typing trainer built by Stuart Hopwood to build neural pathways through keystroke repetition. Deployed on Vercel.
 
 **Repo:** https://github.com/stuarthopwood/typing-trainer
 **Owner:** Stuart Hopwood (stuarthopwood)

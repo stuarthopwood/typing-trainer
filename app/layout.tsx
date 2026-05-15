@@ -15,8 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Typing Trainer",
-  description: "Learn to type faster with muscle memory drills and passage practice",
+  title: "NeuralKeys",
+  description: "Build neural pathways through keystroke repetition — typing drills and passage practice",
 };
 
 export default function RootLayout({

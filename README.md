@@ -1,6 +1,6 @@
-# Typing Trainer
+# NeuralKeys
 
-A web-based typing trainer built to improve speed and accuracy through progressive drills and curated passages. Dark-themed, zero-latency, mobile-friendly.
+Build neural pathways through keystroke repetition. A web-based typing trainer with progressive drills and curated passages. Dark-themed, zero-latency, mobile-friendly.
 
 **Live:** Deployed on Vercel via `master` branch.
 

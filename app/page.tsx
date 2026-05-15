@@ -152,7 +152,7 @@ export default function Home() {
         <div className="w-full px-6 sm:px-10 py-3 flex items-center justify-between">
           <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300 flex items-center gap-2">
             <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5 text-[#00ff88]" />
-            Typing Trainer
+            NeuralKeys
           </h1>
           <Link href="/stats" className="text-neutral-400 hover:text-[#00ff88] transition-colors" title="Stats">
             <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
