@@ -205,14 +205,18 @@ function NeuralKeysApp() {
   }, [activeKey]);
 
   useEffect(() => {
-    const handleEnterForNext = (e: KeyboardEvent) => {
-      if (sessionStats && (e.key === "Enter" || e.key === " ")) {
-        e.preventDefault();
-        handleNext();
-      }
-    };
-    window.addEventListener("keydown", handleEnterForNext);
-    return () => window.removeEventListener("keydown", handleEnterForNext);
+    if (!sessionStats) return;
+    const timer = setTimeout(() => {
+      const handleEnterForNext = (e: KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleNext();
+        }
+      };
+      window.addEventListener("keydown", handleEnterForNext, { once: true });
+      return () => window.removeEventListener("keydown", handleEnterForNext);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [sessionStats, handleNext]);
 
   return (
@@ -292,25 +296,17 @@ function NeuralKeysApp() {
           onKeyPress={handleKeyPress}
         />
 
-        {sessionStats && (
-          <div className="text-center space-y-3">
-            <button
-              onClick={handleNext}
-              className="px-8 py-3 text-lg font-semibold text-black bg-[#00ff88] rounded-xl hover:bg-[#00cc6a] active:bg-[#009e54] transition-colors shadow-sm"
-            >
-              Next →
-            </button>
-            {newAchievements.length > 0 && (
-              <div className="space-y-2" role="status" aria-live="polite">
-                {newAchievements.map((a) => (
-                  <div key={a.id} className="inline-flex items-center gap-2 px-4 py-2 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-sm animate-[pulse_2s_ease-in-out_infinite]">
-                    <span className="text-lg">{a.icon}</span>
-                    <span className="text-[#00ff88] font-medium">{a.name}</span>
-                    <span className="text-neutral-500 text-xs">+{a.xp} XP</span>
-                  </div>
-                ))}
-              </div>
-            )}
+        {sessionStats && newAchievements.length > 0 && (
+          <div className="text-center">
+            <div className="space-y-2" role="status" aria-live="polite">
+              {newAchievements.map((a) => (
+                <div key={a.id} className="inline-flex items-center gap-2 px-4 py-2 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-sm animate-[pulse_2s_ease-in-out_infinite]">
+                  <span className="text-lg">{a.icon}</span>
+                  <span className="text-[#00ff88] font-medium">{a.name}</span>
+                  <span className="text-neutral-500 text-xs">+{a.xp} XP</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
