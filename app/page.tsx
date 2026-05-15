@@ -11,34 +11,54 @@ import VisualKeyboard from "@/components/VisualKeyboard";
 import { buildSessionStats, calculateWpm, calculateAccuracy } from "@/lib/engine";
 import { generateDrillText, DRILL_LEVELS } from "@/lib/drills";
 import { getRandomPassage } from "@/lib/passages";
-import { recordSession } from "@/lib/progress";
+import { recordSession, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED } from "@/lib/progress";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState } from "@/lib/types";
 
 export default function Home() {
-  const [mode, setMode] = useState<TrainingMode>("passage");
+  const [mode, setMode] = useState<TrainingMode>("drill");
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("home-row");
   const [passageDifficulty, setPassageDifficulty] = useState<Passage["difficulty"]>("beginner");
   const [passageCategory, setPassageCategory] = useState<Passage["category"] | "all">("all");
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
   const [liveWpm, setLiveWpm] = useState(0);
-  const [liveAccuracy, setLiveAccuracy] = useState(100);
+  const [liveAccuracy, setLiveAccuracy] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [combo, setCombo] = useState(0);
   const [textKey, setTextKey] = useState(0);
   const [activeKey, setActiveKey] = useState<ActiveKeyState | null>(null);
   const [position, setPosition] = useState(0);
+  const [unlockVersion, setUnlockVersion] = useState(0);
   const activeKeyTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
-  const currentText = useMemo(() => {
+  const unlockedDrillLevels = useMemo(() => getUnlockedDrillLevels(), [unlockVersion]);
+  const unlockedDifficulties = useMemo(() => getUnlockedDifficulties(), [unlockVersion]);
+  const drillProgress = useMemo(() => {
+    const levels = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
+    const result: Record<string, number> = {};
+    for (const l of levels) result[l] = getLevelQualifyingSessions(`drill:${l}`);
+    return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlockVersion]);
+  const difficultyProgress = useMemo(() => {
+    const diffs = ["beginner", "intermediate", "advanced"];
+    const result: Record<string, number> = {};
+    for (const d of diffs) result[d] = getLevelQualifyingSessions(`passage:${d}`);
+    return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlockVersion]);
+
+  const currentPassage = useMemo(() => {
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
-      return generateDrillText(config);
+      return { text: generateDrillText(config), source: "" };
     }
     const cat = passageCategory === "all" ? undefined : passageCategory;
-    return getRandomPassage(passageDifficulty, cat).text;
+    const passage = getRandomPassage(passageDifficulty, cat);
+    return { text: passage.text, source: passage.source };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, drillLevel, passageDifficulty, passageCategory, textKey]);
+  const currentText = currentPassage.text;
 
   const handleProgress = useCallback((pos: number, keyStrokes: KeyStroke[]) => {
     setPosition(pos);
@@ -65,15 +85,16 @@ export default function Home() {
       const stats = buildSessionStats(keyStrokes);
       setSessionStats(stats);
       setIsActive(false);
-      recordSession(stats, mode === "drill" ? `drill:${drillLevel}` : "passage");
+      recordSession(stats, mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`);
+      setUnlockVersion((v) => v + 1);
     },
-    [mode, drillLevel]
+    [mode, drillLevel, passageDifficulty]
   );
 
   const handleNext = useCallback(() => {
     setSessionStats(null);
     setLiveWpm(0);
-    setLiveAccuracy(100);
+    setLiveAccuracy(0);
     setIsActive(false);
     setElapsed(0);
     setCombo(0);
@@ -135,20 +156,27 @@ export default function Home() {
           drillLevel={drillLevel}
           passageDifficulty={passageDifficulty}
           passageCategory={passageCategory}
+          unlockedDrillLevels={unlockedDrillLevels}
+          unlockedDifficulties={unlockedDifficulties}
+          drillProgress={drillProgress}
+          difficultyProgress={difficultyProgress}
+          unlockThreshold={UNLOCK_SESSIONS_REQUIRED}
           onModeChange={(m) => { setMode(m); handleNext(); }}
           onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
           onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
           onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
         />
 
-        <StatsDisplay
-          stats={sessionStats}
-          liveWpm={liveWpm}
-          liveAccuracy={liveAccuracy}
-          isActive={isActive}
-          elapsed={elapsed}
-          combo={combo}
-        />
+        {isActive && (
+          <StatsDisplay
+            stats={sessionStats}
+            liveWpm={liveWpm}
+            liveAccuracy={liveAccuracy}
+            isActive={isActive}
+            elapsed={elapsed}
+            combo={combo}
+          />
+        )}
 
         <TypingArea
           text={currentText}
@@ -162,9 +190,9 @@ export default function Home() {
           nextExpectedKey={position < currentText.length ? currentText[position] : null}
         />
 
-        {mode === "passage" && !sessionStats && (
+        {mode === "passage" && !sessionStats && currentPassage.source && (
           <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-            {getRandomPassage(passageDifficulty, passageCategory === "all" ? undefined : passageCategory).source}
+            {currentPassage.source}
           </p>
         )}
       </div>

@@ -25,14 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`} suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(!window.matchMedia('(prefers-color-scheme:dark)').matches){document.documentElement.classList.remove('dark')}}catch(e){}})();`,
-          }}
-        />
-      </head>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`}>
       <body className="min-h-full font-[family-name:var(--font-inter)] bg-slate-50 dark:bg-[#0d0d0d] text-slate-900 dark:text-neutral-200">
         {children}
         <Analytics />

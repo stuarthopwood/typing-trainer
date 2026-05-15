@@ -10,6 +10,7 @@ export interface ProgressData {
   lastSessionDate: string;
   recentSessions: SessionSummary[];
   errorHeatmap: Record<string, number>;
+  levelProgress: Record<string, number>;
 }
 
 interface SessionSummary {
@@ -27,7 +28,9 @@ export function getProgress(): ProgressData {
   }
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return defaultProgress();
-  return JSON.parse(stored);
+  const data = JSON.parse(stored);
+  if (!data.levelProgress) data.levelProgress = {};
+  return data;
 }
 
 export function recordSession(stats: SessionStats, mode: string): ProgressData {
@@ -59,6 +62,10 @@ export function recordSession(stats: SessionStats, mode: string): ProgressData {
     ...progress.recentSessions,
   ].slice(0, 20);
 
+  if (stats.accuracy >= 85) {
+    progress.levelProgress[mode] = (progress.levelProgress[mode] || 0) + 1;
+  }
+
   for (const stroke of stats.keyStrokes) {
     if (!stroke.correct) {
       progress.errorHeatmap[stroke.expected] = (progress.errorHeatmap[stroke.expected] || 0) + 1;
@@ -88,5 +95,48 @@ function defaultProgress(): ProgressData {
     lastSessionDate: "",
     recentSessions: [],
     errorHeatmap: {},
+    levelProgress: {},
   };
 }
+
+const UNLOCK_THRESHOLD = 5;
+
+const DRILL_ORDER: string[] = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
+const DIFFICULTY_ORDER: string[] = ["beginner", "intermediate", "advanced"];
+
+export function getUnlockedDrillLevels(): Set<string> {
+  const progress = getProgress();
+  const unlocked = new Set<string>(["home-row"]);
+  for (let i = 1; i < DRILL_ORDER.length; i++) {
+    const prev = DRILL_ORDER[i - 1];
+    const qualifying = progress.levelProgress[`drill:${prev}`] || 0;
+    if (qualifying >= UNLOCK_THRESHOLD) {
+      unlocked.add(DRILL_ORDER[i]);
+    } else {
+      break;
+    }
+  }
+  return unlocked;
+}
+
+export function getUnlockedDifficulties(): Set<string> {
+  const progress = getProgress();
+  const unlocked = new Set<string>(["beginner"]);
+  for (let i = 1; i < DIFFICULTY_ORDER.length; i++) {
+    const prev = DIFFICULTY_ORDER[i - 1];
+    const qualifying = progress.levelProgress[`passage:${prev}`] || 0;
+    if (qualifying >= UNLOCK_THRESHOLD) {
+      unlocked.add(DIFFICULTY_ORDER[i]);
+    } else {
+      break;
+    }
+  }
+  return unlocked;
+}
+
+export function getLevelQualifyingSessions(mode: string): number {
+  const progress = getProgress();
+  return progress.levelProgress[mode] || 0;
+}
+
+export const UNLOCK_SESSIONS_REQUIRED = UNLOCK_THRESHOLD;

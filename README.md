@@ -39,6 +39,13 @@ A full Keychron K2 HE (75%) layout rendered below the typing area:
 - Modifiers stay highlighted while held
 - Hidden on mobile — responsive with `clamp()`-based sizing
 
+### Progressive Unlocking
+
+Drill levels and passage difficulties are gated behind a progression system:
+- Must complete 5 sessions at 85%+ accuracy to unlock the next level
+- Locked levels show greyed out with a progress counter (e.g., "3/5")
+- First level of each track (home-row, beginner) always unlocked
+
 ### UX
 
 - Backspace allowed — original errors stay in history (no accuracy cheating)
