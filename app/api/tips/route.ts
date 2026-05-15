@@ -1,0 +1,29 @@
+import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+export async function POST(req: NextRequest) {
+  const apiKey = req.headers.get("x-api-key");
+  if (apiKey !== process.env.PROGRESS_API_KEY) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { prompt } = await req.json();
+  if (!prompt || typeof prompt !== "string" || prompt.length > 2000) {
+    return NextResponse.json({ error: "Invalid prompt" }, { status: 400 });
+  }
+
+  try {
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 60,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = message.content[0]?.type === "text" ? message.content[0].text : "";
+    return NextResponse.json({ tip: text.trim() });
+  } catch {
+    return NextResponse.json({ error: "AI unavailable" }, { status: 503 });
+  }
+}

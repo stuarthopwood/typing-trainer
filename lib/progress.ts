@@ -13,6 +13,7 @@ export interface ProgressData {
   levelProgress: Record<string, number>;
   xp: number;
   achievements: { id: string; unlockedAt: string }[];
+  tips: { text: string; createdAt: string }[];
 }
 
 interface SessionSummary {
@@ -38,6 +39,7 @@ export function getProgress(): ProgressData {
     if (!data.levelProgress) data.levelProgress = {};
     if (!data.xp) data.xp = 0;
     if (!data.achievements) data.achievements = [];
+    if (!data.tips) data.tips = [];
     return data;
   } catch {
     return defaultProgress();
@@ -109,6 +111,7 @@ function defaultProgress(): ProgressData {
     levelProgress: {},
     xp: 0,
     achievements: [],
+    tips: [],
   };
 }
 
@@ -216,6 +219,7 @@ export function mergeProgress(local: ProgressData, remote: ProgressData): Progre
     levelProgress: mergeLevelProgress(local.levelProgress, remote.levelProgress),
     xp: Math.max(local.xp || 0, remote.xp || 0),
     achievements: mergeAchievements(local.achievements || [], remote.achievements || []),
+    tips: mergeTips(local.tips || [], remote.tips || []),
   };
 }
 
@@ -246,6 +250,18 @@ function mergeLevelProgress(a: Record<string, number>, b: Record<string, number>
     result[k] = Math.max(result[k] || 0, v);
   }
   return result;
+}
+
+function mergeTips(a: { text: string; createdAt: string }[], b: { text: string; createdAt: string }[]): { text: string; createdAt: string }[] {
+  const seen = new Set<string>();
+  const merged: { text: string; createdAt: string }[] = [];
+  for (const t of [...a, ...b]) {
+    if (!seen.has(t.text)) {
+      seen.add(t.text);
+      merged.push(t);
+    }
+  }
+  return merged.sort((x, y) => y.createdAt.localeCompare(x.createdAt)).slice(0, 20);
 }
 
 function mergeAchievements(a: { id: string; unlockedAt: string }[], b: { id: string; unlockedAt: string }[]): { id: string; unlockedAt: string }[] {

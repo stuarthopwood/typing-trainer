@@ -15,6 +15,8 @@ import { checkAchievements, getLevelFromXp, type Achievement, type AchievementCo
 import { getRandomPassage } from "@/lib/passages";
 import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress, getUserPin, setUserPin } from "@/lib/progress";
 import PinEntry from "@/components/PinEntry";
+import TipBox from "@/components/TipBox";
+import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState } from "@/lib/types";
 
 export default function Home() {
@@ -52,6 +54,10 @@ function NeuralKeysApp() {
   const [sessionResults, setSessionResults] = useState<{ wpm: number; accuracy: number }[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
+  const [currentTip, setCurrentTip] = useState<string | null>(null);
+  const [tipLoading, setTipLoading] = useState(false);
+  const tipCooldownRef = useRef(false);
+  const recentErrorsRef = useRef<KeyStroke[]>([]);
   const activeKeyTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   const [unlockedDrillLevels, setUnlockedDrillLevels] = useState<Set<string>>(new Set(["home-row"]));
@@ -90,6 +96,33 @@ function NeuralKeysApp() {
   }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const fetchTip = useCallback(async (keyStrokes: KeyStroke[], text: string) => {
+    const patterns = detectErrorPatterns(keyStrokes, recentErrorsRef.current);
+    if (patterns.length === 0) return;
+    setTipLoading(true);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
+      const res = await fetch("/api/tips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey || "" },
+        body: JSON.stringify({ prompt: buildTipPrompt(patterns, text) }),
+      });
+      if (res.ok) {
+        const { tip } = await res.json();
+        if (tip) {
+          setCurrentTip(tip);
+          const progress = getProgress();
+          progress.tips = [{ text: tip, createdAt: new Date().toISOString() }, ...(progress.tips || [])].slice(0, 20);
+          localStorage.setItem("typing-trainer-progress", JSON.stringify(progress));
+        }
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setTipLoading(false);
+    }
+  }, []);
+
   const handleProgress = useCallback((pos: number, keyStrokes: KeyStroke[]) => {
     setPosition(pos);
     if (keyStrokes.length < 2) {
@@ -107,8 +140,15 @@ function NeuralKeysApp() {
       setCombo((c) => c + 1);
     } else {
       setCombo(0);
+      recentErrorsRef.current.push(last);
+      const errorCount = keyStrokes.filter((k) => !k.correct).length;
+      if (errorCount >= 5 && !tipCooldownRef.current && !tipLoading) {
+        tipCooldownRef.current = true;
+        fetchTip(keyStrokes, currentText);
+        setTimeout(() => { tipCooldownRef.current = false; }, 30000);
+      }
     }
-  }, []);
+  }, [tipLoading, currentText, fetchTip]);
 
   useEffect(() => {
     loadFromRemote().then((remote) => {
@@ -181,6 +221,8 @@ function NeuralKeysApp() {
     setCombo(0);
     setTextKey((k) => k + 1);
     setPosition(0);
+    setCurrentTip(null);
+    recentErrorsRef.current = [];
   }, []);
 
   const handleKeyPress = useCallback((key: string, code: string, correct: boolean | null) => {
@@ -289,12 +331,15 @@ function NeuralKeysApp() {
           />
         )}
 
-        <TypingArea
-          text={currentText}
-          onComplete={handleComplete}
-          onProgress={handleProgress}
-          onKeyPress={handleKeyPress}
-        />
+        <div className="relative">
+          <TipBox tip={currentTip} loading={tipLoading} />
+          <TypingArea
+            text={currentText}
+            onComplete={handleComplete}
+            onProgress={handleProgress}
+            onKeyPress={handleKeyPress}
+          />
+        </div>
 
         {sessionStats && newAchievements.length > 0 && (
           <div className="text-center">
