@@ -97,7 +97,9 @@ const WORD_BANK: Record<string, string[]> = {
   ],
 };
 
-const LEVEL_ORDER: string[] = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
+import { DRILL_ORDER } from "./progress";
+
+const LEVEL_ORDER = DRILL_ORDER;
 
 export function generateDrillText(config: DrillConfig, length: number = 50, unlockedLevels?: Set<string>): string {
   const primaryWords = WORD_BANK[config.level] || WORD_BANK["full"];

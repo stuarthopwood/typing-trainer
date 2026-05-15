@@ -60,7 +60,8 @@ export default function ModeSelector({
               ? "text-[#00ff88] bg-[#00ff88]/10"
               : "text-neutral-500 hover:text-neutral-300"
           }`}
-          title="Key Drill"
+          aria-pressed={mode === "drill"}
+          aria-label="Key Drill mode"
         >
           <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5" />
         </button>
@@ -71,7 +72,8 @@ export default function ModeSelector({
               ? "text-[#00ff88] bg-[#00ff88]/10"
               : "text-neutral-500 hover:text-neutral-300"
           }`}
-          title="Passages"
+          aria-pressed={mode === "passage"}
+          aria-label="Passage mode"
         >
           <FontAwesomeIcon icon={faBook} className="w-5 h-5" />
         </button>
@@ -120,6 +122,8 @@ export default function ModeSelector({
               <button
                 key={level}
                 onClick={() => unlocked && onDrillLevelChange(level)}
+                disabled={!unlocked}
+                aria-disabled={!unlocked}
                 className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 ${
                   !unlocked
                     ? "text-neutral-700 cursor-not-allowed"

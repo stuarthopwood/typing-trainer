@@ -114,7 +114,7 @@ function defaultProgress(): ProgressData {
 
 const UNLOCK_THRESHOLD = 5;
 
-const DRILL_ORDER: string[] = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
+export const DRILL_ORDER: string[] = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
 const DIFFICULTY_ORDER: string[] = ["beginner", "intermediate", "advanced"];
 
 export function getUnlockedDrillLevels(): Set<string> {

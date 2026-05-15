@@ -105,9 +105,9 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
   /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" tabIndex={0} role="application" aria-label="Typing area — type the displayed text">
       {capsLockOn && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-red-900/80 rounded-2xl backdrop-blur-sm">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-red-900/80 rounded-2xl backdrop-blur-sm" role="alert" aria-live="assertive">
           <div className="text-center p-8">
             <div className="text-5xl mb-4">⚠️</div>
             <h2 className="text-2xl font-bold text-white mb-2">Caps Lock is ON</h2>
@@ -144,7 +144,7 @@ const Char = memo(function Char({ char, state }: { char: string; state: "pending
         ? "text-[#00ff88]/80"
         : state === "active"
           ? "text-white bg-[#00ff88]/15 rounded-sm border-b-2 border-[#00ff88] shadow-[0_0_8px_rgba(0,255,136,0.3)] animate-[pulse_2s_ease-in-out_infinite]"
-          : "text-neutral-600";
+          : "text-neutral-500";
 
   const display = char === "\n" ? "↵\n" : state === "active" && char === " " ? "·" : char;
 

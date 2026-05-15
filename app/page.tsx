@@ -130,7 +130,10 @@ function NeuralKeysApp() {
       const updated = recordSession(stats, mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`);
       setUnlockVersion((v) => v + 1);
 
-      // Check achievements
+      // Award base XP + check achievements in one pass
+      const baseXp = 5 + (stats.accuracy >= 95 ? 5 : stats.accuracy >= 85 ? 3 : 0);
+      updated.xp = (updated.xp || 0) + baseXp;
+
       const context: AchievementContext = {
         totalSessions: updated.totalSessions,
         totalCharsTyped: updated.totalCharsTyped,
@@ -145,22 +148,15 @@ function NeuralKeysApp() {
       const earned = checkAchievements(context, updated.achievements.map((a) => a.id));
       if (earned.length > 0) {
         const now = new Date().toISOString();
-        let xpGain = 0;
         for (const a of earned) {
           updated.achievements.push({ id: a.id, unlockedAt: now });
-          xpGain += a.xp;
+          updated.xp += a.xp;
         }
-        updated.xp = (updated.xp || 0) + xpGain;
-        localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
         setNewAchievements(earned);
         setTimeout(() => setNewAchievements([]), 4000);
       }
 
-      // Base XP: 5 per session + bonus for accuracy
-      const baseXp = 5 + (stats.accuracy >= 95 ? 5 : stats.accuracy >= 85 ? 3 : 0);
-      updated.xp = (updated.xp || 0) + baseXp;
       localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
-
       syncToRemote(updated);
 
       // Auto-progression: advance drill level if next level just unlocked
@@ -232,7 +228,8 @@ function NeuralKeysApp() {
             <button
               onClick={() => setSoundEnabled((s) => !s)}
               className={`transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-600 hover:text-neutral-400"}`}
-              title={soundEnabled ? "Sound on" : "Sound off"}
+              aria-label={soundEnabled ? "Disable sound" : "Enable sound"}
+              aria-pressed={soundEnabled}
             >
               <FontAwesomeIcon icon={soundEnabled ? faVolumeHigh : faVolumeXmark} className="w-4 h-4" />
             </button>
@@ -283,8 +280,8 @@ function NeuralKeysApp() {
             combo={combo}
             sessionAvgWpm={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.wpm, 0) / sessionResults.length) : undefined}
             sessionAvgAccuracy={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.accuracy, 0) / sessionResults.length) : undefined}
-            allTimeBestWpm={getProgress().bestWpm}
-            allTimeBestAccuracy={getProgress().bestAccuracy}
+            allTimeBestWpm={sessionStats ? getProgress().bestWpm : undefined}
+            allTimeBestAccuracy={sessionStats ? getProgress().bestAccuracy : undefined}
           />
         )}
 
@@ -304,7 +301,7 @@ function NeuralKeysApp() {
               Next →
             </button>
             {newAchievements.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2" role="status" aria-live="polite">
                 {newAchievements.map((a) => (
                   <div key={a.id} className="inline-flex items-center gap-2 px-4 py-2 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-sm animate-[pulse_2s_ease-in-out_infinite]">
                     <span className="text-lg">{a.icon}</span>
@@ -340,7 +337,7 @@ function XpBar() {
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs font-bold text-[#00ff88]">Lv.{level}</span>
-      <div className="w-20 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+      <div className="w-20 h-1.5 bg-neutral-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={currentXp} aria-valuemax={nextLevelXp} aria-label={`Level ${level} progress: ${pct}%`}>
         <div className="h-full bg-[#00ff88]/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-neutral-600">{progress.xp || 0} XP</span>

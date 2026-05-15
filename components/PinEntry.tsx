@@ -32,6 +32,7 @@ export default function PinEntry({ onSubmit }: PinEntryProps) {
           value={pin}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
           placeholder="••••••"
+          aria-label="PIN code"
           className="w-56 px-4 py-3 text-center text-2xl tracking-[0.5em] bg-[#141414] border border-neutral-700 rounded-xl text-neutral-200 placeholder:tracking-[0.3em] placeholder:text-neutral-600 focus:border-[#00ff88]/50 focus:outline-none"
           autoFocus
         />

@@ -17,7 +17,7 @@ export default memo(function VisualKeyboard({ activeKey, nextExpectedKey }: Visu
   );
 
   return (
-    <div className="hidden md:block w-full mx-auto" style={{ ["--key-unit" as string]: "clamp(34px, 3.84vw, 53px)" }}>
+    <div className="hidden md:block w-full mx-auto" aria-hidden="true" style={{ ["--key-unit" as string]: "clamp(34px, 3.84vw, 53px)" }}>
       {KEYCHRON_K2_LAYOUT.map((row, rowIdx) => (
         <div key={rowIdx} className="flex gap-[3px] mb-[3px] last:mb-0 justify-center">
           {row.map((keyDef) => (
