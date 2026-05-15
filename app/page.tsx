@@ -3,13 +3,14 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartLine, faKeyboard } from "@fortawesome/free-solid-svg-icons";
+import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
 import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
 import VisualKeyboard from "@/components/VisualKeyboard";
 import { buildSessionStats, calculateWpm, calculateAccuracy } from "@/lib/engine";
 import { generateDrillText, DRILL_LEVELS } from "@/lib/drills";
+import { playKeyClick, playKeyError } from "@/lib/sounds";
 import { getRandomPassage } from "@/lib/passages";
 import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress } from "@/lib/progress";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState } from "@/lib/types";
@@ -29,6 +30,8 @@ export default function Home() {
   const [activeKey, setActiveKey] = useState<ActiveKeyState | null>(null);
   const [position, setPosition] = useState(0);
   const [unlockVersion, setUnlockVersion] = useState(0);
+  const [sessionResults, setSessionResults] = useState<{ wpm: number; accuracy: number }[]>([]);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const activeKeyTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   const [unlockedDrillLevels, setUnlockedDrillLevels] = useState<Set<string>>(new Set(["home-row"]));
@@ -55,14 +58,14 @@ export default function Home() {
   useEffect(() => {
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
-      setCurrentPassage({ text: generateDrillText(config), source: "" });
+      setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels), source: "" });
     } else {
       const cat = passageCategory === "all" ? undefined : passageCategory;
       const passage = getRandomPassage(passageDifficulty, cat);
       setCurrentPassage({ text: passage.text, source: passage.source });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey]);
+  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels]);
 
   const handleProgress = useCallback((pos: number, keyStrokes: KeyStroke[]) => {
     setPosition(pos);
@@ -100,11 +103,22 @@ export default function Home() {
       const stats = buildSessionStats(keyStrokes);
       setSessionStats(stats);
       setIsActive(false);
+      setSessionResults((prev) => [...prev, { wpm: stats.wpm, accuracy: stats.accuracy }]);
       const updated = recordSession(stats, mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`);
       setUnlockVersion((v) => v + 1);
       syncToRemote(updated);
+
+      // Auto-progression: advance drill level if next level just unlocked
+      if (mode === "drill") {
+        const newUnlocked = getUnlockedDrillLevels();
+        const levels: DrillLevel[] = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
+        const currentIdx = levels.indexOf(drillLevel);
+        if (currentIdx < levels.length - 1 && newUnlocked.has(levels[currentIdx + 1]) && !unlockedDrillLevels.has(levels[currentIdx + 1])) {
+          setDrillLevel(levels[currentIdx + 1]);
+        }
+      }
     },
-    [mode, drillLevel, passageDifficulty]
+    [mode, drillLevel, passageDifficulty, unlockedDrillLevels]
   );
 
   const handleNext = useCallback(() => {
@@ -122,7 +136,11 @@ export default function Home() {
     clearTimeout(activeKeyTimeoutRef.current);
     setActiveKey({ key, code, correct, timestamp: performance.now() });
     activeKeyTimeoutRef.current = setTimeout(() => setActiveKey(null), 150);
-  }, []);
+    if (soundEnabled && correct !== null) {
+      if (correct) playKeyClick();
+      else playKeyError();
+    }
+  }, [soundEnabled]);
 
   useEffect(() => {
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -154,9 +172,18 @@ export default function Home() {
             <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5 text-[#00ff88]" />
             NeuralKeys
           </h1>
-          <Link href="/stats" className="text-neutral-400 hover:text-[#00ff88] transition-colors" title="Stats">
-            <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
-          </Link>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSoundEnabled((s) => !s)}
+              className={`transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-600 hover:text-neutral-400"}`}
+              title={soundEnabled ? "Sound on" : "Sound off"}
+            >
+              <FontAwesomeIcon icon={soundEnabled ? faVolumeHigh : faVolumeXmark} className="w-4 h-4" />
+            </button>
+            <Link href="/stats" className="text-neutral-400 hover:text-[#00ff88] transition-colors" title="Stats">
+              <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -198,6 +225,10 @@ export default function Home() {
             isActive={isActive}
             elapsed={elapsed}
             combo={combo}
+            sessionAvgWpm={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.wpm, 0) / sessionResults.length) : undefined}
+            sessionAvgAccuracy={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.accuracy, 0) / sessionResults.length) : undefined}
+            allTimeBestWpm={getProgress().bestWpm}
+            allTimeBestAccuracy={getProgress().bestAccuracy}
           />
         )}
 

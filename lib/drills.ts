@@ -97,16 +97,41 @@ const WORD_BANK: Record<string, string[]> = {
   ],
 };
 
-export function generateDrillText(config: DrillConfig, length: number = 50): string {
-  const words = WORD_BANK[config.level] || WORD_BANK["full"];
+const LEVEL_ORDER: string[] = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
+
+export function generateDrillText(config: DrillConfig, length: number = 50, unlockedLevels?: Set<string>): string {
+  const primaryWords = WORD_BANK[config.level] || WORD_BANK["full"];
+  const mixWords = getMixWords(config.level, unlockedLevels);
+
   const selected: string[] = [];
   let currentLength = 0;
+  let lastWord = "";
 
   while (currentLength < length) {
-    const word = words[Math.floor(Math.random() * words.length)];
+    const useMix = mixWords.length > 0 && Math.random() < 0.2;
+    const pool = useMix ? mixWords : primaryWords;
+    let word = pool[Math.floor(Math.random() * pool.length)];
+
+    // Repeat words for reinforcement (30% chance to repeat the last word)
+    if (lastWord && !useMix && Math.random() < 0.3) {
+      word = lastWord;
+    }
+
     selected.push(word);
     currentLength += word.length + 1;
+    lastWord = word;
   }
 
   return selected.join(" ");
+}
+
+function getMixWords(currentLevel: string, unlockedLevels?: Set<string>): string[] {
+  if (!unlockedLevels) return [];
+  const currentIdx = LEVEL_ORDER.indexOf(currentLevel);
+  if (currentIdx < 0 || currentIdx >= LEVEL_ORDER.length - 1) return [];
+
+  const nextLevel = LEVEL_ORDER[currentIdx + 1];
+  if (!unlockedLevels.has(nextLevel)) return [];
+
+  return WORD_BANK[nextLevel] || [];
 }
