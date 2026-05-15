@@ -30,11 +30,18 @@ export function getProgress(): ProgressData {
   }
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return defaultProgress();
-  const data = JSON.parse(stored);
-  if (!data.levelProgress) data.levelProgress = {};
-  if (!data.xp) data.xp = 0;
-  if (!data.achievements) data.achievements = [];
-  return data;
+  try {
+    const data = JSON.parse(stored);
+    if (!data || typeof data !== "object" || typeof data.totalSessions !== "number") {
+      return defaultProgress();
+    }
+    if (!data.levelProgress) data.levelProgress = {};
+    if (!data.xp) data.xp = 0;
+    if (!data.achievements) data.achievements = [];
+    return data;
+  } catch {
+    return defaultProgress();
+  }
 }
 
 export function recordSession(stats: SessionStats, mode: string): ProgressData {
