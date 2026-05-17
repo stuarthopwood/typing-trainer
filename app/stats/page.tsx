@@ -48,11 +48,6 @@ export default function StatsPage() {
       ? Math.round(sessions.reduce((sum, s) => sum + s.wpm, 0) / sessions.length)
       : 0;
 
-  const avgAccuracy =
-    sessions.length > 0
-      ? Math.round(sessions.reduce((sum, s) => sum + s.accuracy, 0) / sessions.length)
-      : 0;
-
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-[#0d0d0d]">
       <header className="dark:bg-[#141414] border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm">
@@ -80,42 +75,77 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <div className="w-full px-6 sm:px-10 py-8 space-y-10">
-        {/* Overview */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
-          <BigStat icon={faKeyboard} value={progress.totalSessions} label="Sessions" />
-          <BigStat icon={faGauge} value={progress.bestWpm} label="Best WPM" color="text-[#00ff88]" />
-          <BigStat icon={faBullseye} value={`${progress.bestAccuracy}%`} label="Best Accuracy" color="text-[#00ff88]" />
-          <BigStat icon={faFire} value={progress.bestStreak} label="Best Streak" color="text-orange-400" />
-        </div>
-
-        {/* Averages */}
-        <div className="text-center space-y-1">
-          <h2 className="text-sm text-neutral-500 uppercase tracking-wider">Recent Average</h2>
-          <div className="flex items-center justify-center gap-10">
-            <div>
-              <span className="text-3xl font-bold text-neutral-200">{avgWpm}</span>
-              <span className="text-sm text-neutral-500 ml-1">WPM</span>
+      <div className="w-full px-6 sm:px-10 py-6 space-y-6">
+        {/* Row 1: Overview stats + streak */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <Panel className="col-span-2 sm:col-span-1">
+            <BigStat icon={faKeyboard} value={progress.totalSessions} label="Sessions" />
+          </Panel>
+          <Panel className="col-span-1">
+            <BigStat icon={faGauge} value={progress.bestWpm} label="Best WPM" color="text-[#00ff88]" />
+          </Panel>
+          <Panel className="col-span-1">
+            <BigStat icon={faBullseye} value={`${progress.bestAccuracy}%`} label="Best Accuracy" color="text-[#00ff88]" />
+          </Panel>
+          <Panel className="col-span-1">
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl font-bold text-orange-400">{progress.currentStreak}</div>
+              <div className="text-xs text-neutral-500 mt-1 flex items-center justify-center gap-1">
+                <FontAwesomeIcon icon={faFire} className="w-3 h-3" />
+                Day Streak
+              </div>
             </div>
-            <div>
-              <span className="text-3xl font-bold text-neutral-200">{avgAccuracy}%</span>
-              <span className="text-sm text-neutral-500 ml-1">accuracy</span>
+          </Panel>
+          <Panel className="col-span-1">
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl font-bold text-neutral-200">{avgWpm}</div>
+              <div className="text-xs text-neutral-500 mt-1">Avg WPM</div>
             </div>
-          </div>
+          </Panel>
         </div>
 
-        {/* Streak */}
-        <div className="text-center space-y-1">
-          <h2 className="text-sm text-neutral-500 uppercase tracking-wider">Current Streak</h2>
-          <div className="text-4xl font-bold text-orange-400">
-            {progress.currentStreak} day{progress.currentStreak !== 1 ? "s" : ""}
-          </div>
-          <p className="text-xs text-neutral-600">
-            {progress.totalCharsTyped.toLocaleString()} characters typed total
-          </p>
+        {/* Row 2: Recent Sessions + AI Tips (actionable items at the top) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {sessions.length > 0 && (
+            <Panel>
+              <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">Recent Sessions</h2>
+              <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                {sessions.slice(0, 15).map((session, i) => (
+                  <div key={session.id || i} className="flex items-center justify-between px-3 py-1.5 rounded bg-neutral-800/40">
+                    <span className="text-xs text-neutral-500 w-20">{session.date}</span>
+                    <span className="text-xs text-neutral-400 w-28 truncate">{session.mode}</span>
+                    {session.duration > 0 && (
+                      <span className="text-xs text-neutral-600 w-10">{Math.round(session.duration / 1000)}s</span>
+                    )}
+                    <span className="text-sm font-bold text-neutral-200 w-16 text-right">{session.wpm} WPM</span>
+                    <span className={`text-sm font-bold w-12 text-right ${session.accuracy >= 95 ? "text-[#00ff88]" : session.accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>
+                      {session.accuracy}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
+
+          {progress.tips && progress.tips.length > 0 && (
+            <Panel>
+              <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">AI Tips</h2>
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {progress.tips.slice(0, 8).map((tip, i) => (
+                  <div key={i} className="flex items-start gap-2 px-3 py-2 rounded bg-neutral-800/40">
+                    <span className="text-amber-400 mt-0.5 text-sm">💡</span>
+                    <div>
+                      <p className="text-sm text-neutral-300">{tip.text}</p>
+                      <p className="text-[10px] text-neutral-600 mt-0.5">{tip.createdAt.split("T")[0]}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
         </div>
 
-        {/* Loading indicator for full history */}
+        {/* Loading indicator */}
         {loadingHistory && (
           <div className="text-center text-neutral-500 text-sm">
             <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin mr-2" />
@@ -123,65 +153,47 @@ export default function StatsPage() {
           </div>
         )}
 
-        {/* Charts */}
-        <WpmChart sessions={sessions} />
-        <AccuracyChart sessions={sessions} />
-        <AnalyticsSummary sessions={sessions} />
-        <PracticeHeatmap sessions={sessions} />
-        <SessionsPerWeek sessions={sessions} />
-        <ModeBreakdown sessions={sessions} />
-        <BigramChart sessions={sessions} />
-        <ErrorDistribution errorHeatmap={progress.errorHeatmap} />
+        {/* Row 3: Performance charts (WPM + Accuracy side by side) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Panel><WpmChart sessions={sessions} /></Panel>
+          <Panel><AccuracyChart sessions={sessions} /></Panel>
+        </div>
 
-        {/* Error Heatmap Keyboard */}
-        {Object.keys(progress.errorHeatmap).length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Error Heatmap</h2>
-            <KeyboardHeatmap errorHeatmap={progress.errorHeatmap} />
-          </div>
-        )}
+        {/* Row 4: Analytics summary */}
+        <Panel><AnalyticsSummary sessions={sessions} /></Panel>
 
-        {/* Recent Sessions */}
-        {sessions.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Recent Sessions</h2>
-            <div className="space-y-1.5">
-              {sessions.slice(0, 20).map((session, i) => (
-                <div key={session.id || i} className="flex items-center justify-between px-4 py-2 rounded-lg bg-neutral-800/30">
-                  <span className="text-xs text-neutral-500">{session.date}</span>
-                  <span className="text-xs text-neutral-400">{session.mode}</span>
-                  {session.duration > 0 && (
-                    <span className="text-xs text-neutral-600">{Math.round(session.duration / 1000)}s</span>
-                  )}
-                  <span className="text-sm font-bold text-neutral-200">{session.wpm} WPM</span>
-                  <span className={`text-sm font-bold ${session.accuracy >= 95 ? "text-[#00ff88]" : session.accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>
-                    {session.accuracy}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Row 5: Activity (Practice heatmap + Sessions per week) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Panel><PracticeHeatmap sessions={sessions} /></Panel>
+          <Panel><SessionsPerWeek sessions={sessions} /></Panel>
+        </div>
 
-        {/* AI Tips */}
-        {progress.tips && progress.tips.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">AI Tips</h2>
-            <div className="space-y-2">
-              {progress.tips.slice(0, 10).map((tip, i) => (
-                <div key={i} className="flex items-start gap-2 px-4 py-2 rounded-lg bg-neutral-800/30">
-                  <span className="text-amber-400 mt-0.5">💡</span>
-                  <div>
-                    <p className="text-sm text-neutral-300">{tip.text}</p>
-                    <p className="text-xs text-neutral-600">{tip.createdAt.split("T")[0]}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Row 6: Weaknesses (Error distribution + Slow bigrams) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Panel><ErrorDistribution errorHeatmap={progress.errorHeatmap} /></Panel>
+          <Panel><BigramChart sessions={sessions} /></Panel>
+        </div>
+
+        {/* Row 7: Deeper analysis (Mode breakdown + Keyboard heatmap) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Panel><ModeBreakdown sessions={sessions} /></Panel>
+          {Object.keys(progress.errorHeatmap).length > 0 && (
+            <Panel>
+              <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center mb-3">Error Heatmap</h2>
+              <KeyboardHeatmap errorHeatmap={progress.errorHeatmap} />
+            </Panel>
+          )}
+        </div>
       </div>
     </main>
+  );
+}
+
+function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`bg-neutral-900/40 border border-neutral-800/50 rounded-xl p-5 ${className}`}>
+      {children}
+    </div>
   );
 }
 
@@ -197,7 +209,7 @@ function BigStat({
   color?: string;
 }) {
   return (
-    <div>
+    <div className="text-center">
       <div className={`text-3xl sm:text-4xl font-bold ${color}`}>{value}</div>
       <div className="text-xs text-neutral-500 mt-1 flex items-center justify-center gap-1">
         <FontAwesomeIcon icon={icon} className="w-3 h-3" />
