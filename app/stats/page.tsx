@@ -1,51 +1,82 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartLine } from "@fortawesome/free-solid-svg-icons";
-import { getProgress, type ProgressData } from "@/lib/progress";
+import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartLine, faRightFromBracket, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { getProgress, clearUserPin, loadFullHistory, type ProgressData } from "@/lib/progress";
+import type { EnrichedSessionSummary } from "@/lib/types";
 import KeyboardHeatmap from "@/components/KeyboardHeatmap";
+import WpmChart from "@/components/charts/WpmChart";
+import AccuracyChart from "@/components/charts/AccuracyChart";
+import SessionsPerWeek from "@/components/charts/SessionsPerWeek";
+import PracticeHeatmap from "@/components/charts/PracticeHeatmap";
+import ModeBreakdown from "@/components/charts/ModeBreakdown";
+import ErrorDistribution from "@/components/charts/ErrorDistribution";
+import BigramChart from "@/components/charts/BigramChart";
+import AnalyticsSummary from "@/components/charts/AnalyticsSummary";
 
 export default function StatsPage() {
+  const router = useRouter();
   const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [allSessions, setAllSessions] = useState<EnrichedSessionSummary[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setProgress(getProgress());
+    loadFullHistory().then((sessions) => {
+      setAllSessions(sessions);
+      setLoadingHistory(false);
+    }).catch(() => setLoadingHistory(false));
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const handleLogout = () => {
+    clearUserPin();
+    localStorage.removeItem("typing-trainer-progress");
+    router.push("/");
+  };
+
   if (!progress) return null;
 
+  const sessions = allSessions.length > 0 ? allSessions : progress.recentSessions;
+
   const avgWpm =
-    progress.recentSessions.length > 0
-      ? Math.round(progress.recentSessions.reduce((sum, s) => sum + s.wpm, 0) / progress.recentSessions.length)
+    sessions.length > 0
+      ? Math.round(sessions.reduce((sum, s) => sum + s.wpm, 0) / sessions.length)
       : 0;
 
   const avgAccuracy =
-    progress.recentSessions.length > 0
-      ? Math.round(progress.recentSessions.reduce((sum, s) => sum + s.accuracy, 0) / progress.recentSessions.length)
+    sessions.length > 0
+      ? Math.round(sessions.reduce((sum, s) => sum + s.accuracy, 0) / sessions.length)
       : 0;
-
-  const topErrors = Object.entries(progress.errorHeatmap)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10);
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-[#0d0d0d]">
       <header className="dark:bg-[#141414] border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm">
-        <div className="w-full px-6 sm:px-10 py-3 flex items-center gap-4">
-          <Link
-            href="/"
-            className="text-neutral-400 hover:text-[#00ff88] transition-colors"
+        <div className="w-full px-6 sm:px-10 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="text-neutral-400 hover:text-[#00ff88] transition-colors"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+            </Link>
+            <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300 flex items-center gap-2">
+              <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-[#00ff88]" />
+              Stats
+            </h1>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="text-neutral-600 hover:text-red-400 transition-colors"
+            aria-label="Logout"
+            title="Logout"
           >
-            <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
-          </Link>
-          <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300 flex items-center gap-2">
-            <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-[#00ff88]" />
-            Stats
-          </h1>
+            <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -84,8 +115,26 @@ export default function StatsPage() {
           </p>
         </div>
 
+        {/* Loading indicator for full history */}
+        {loadingHistory && (
+          <div className="text-center text-neutral-500 text-sm">
+            <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin mr-2" />
+            Loading full history...
+          </div>
+        )}
+
+        {/* Charts */}
+        <WpmChart sessions={sessions} />
+        <AccuracyChart sessions={sessions} />
+        <AnalyticsSummary sessions={sessions} />
+        <PracticeHeatmap sessions={sessions} />
+        <SessionsPerWeek sessions={sessions} />
+        <ModeBreakdown sessions={sessions} />
+        <BigramChart sessions={sessions} />
+        <ErrorDistribution errorHeatmap={progress.errorHeatmap} />
+
         {/* Error Heatmap Keyboard */}
-        {topErrors.length > 0 && (
+        {Object.keys(progress.errorHeatmap).length > 0 && (
           <div className="space-y-3">
             <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Error Heatmap</h2>
             <KeyboardHeatmap errorHeatmap={progress.errorHeatmap} />
@@ -93,14 +142,17 @@ export default function StatsPage() {
         )}
 
         {/* Recent Sessions */}
-        {progress.recentSessions.length > 0 && (
+        {sessions.length > 0 && (
           <div className="space-y-3">
             <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Recent Sessions</h2>
             <div className="space-y-1.5">
-              {progress.recentSessions.slice(0, 10).map((session, i) => (
-                <div key={i} className="flex items-center justify-between px-4 py-2 rounded-lg bg-neutral-800/30">
+              {sessions.slice(0, 20).map((session, i) => (
+                <div key={session.id || i} className="flex items-center justify-between px-4 py-2 rounded-lg bg-neutral-800/30">
                   <span className="text-xs text-neutral-500">{session.date}</span>
                   <span className="text-xs text-neutral-400">{session.mode}</span>
+                  {session.duration > 0 && (
+                    <span className="text-xs text-neutral-600">{Math.round(session.duration / 1000)}s</span>
+                  )}
                   <span className="text-sm font-bold text-neutral-200">{session.wpm} WPM</span>
                   <span className={`text-sm font-bold ${session.accuracy >= 95 ? "text-[#00ff88]" : session.accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>
                     {session.accuracy}%

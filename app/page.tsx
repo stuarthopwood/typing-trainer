@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark } from "@fortawesome/free-solid-svg-icons";
+import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
 import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
@@ -13,10 +13,11 @@ import { generateDrillText, DRILL_LEVELS } from "@/lib/drills";
 import { playKeyClick, playKeyError } from "@/lib/sounds";
 import { checkAchievements, getLevelFromXp, type Achievement, type AchievementContext } from "@/lib/achievements";
 import { getRandomPassage } from "@/lib/passages";
-import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress, getUserPin, setUserPin } from "@/lib/progress";
+import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress, getUserPin, setUserPin, clearUserPin } from "@/lib/progress";
 import PinEntry from "@/components/PinEntry";
 import TipBox from "@/components/TipBox";
 import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
+import { computeSessionTimingMetadata, updatePracticeTargets } from "@/lib/analytics";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState } from "@/lib/types";
 
 export default function Home() {
@@ -28,15 +29,21 @@ export default function Home() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const handleLogout = useCallback(() => {
+    clearUserPin();
+    localStorage.removeItem("typing-trainer-progress");
+    setHasPin(false);
+  }, []);
+
   if (hasPin === null) return null;
   if (!hasPin) {
     return <PinEntry onSubmit={(pin) => { setUserPin(pin); setHasPin(true); }} />;
   }
 
-  return <NeuralKeysApp />;
+  return <NeuralKeysApp onLogout={handleLogout} />;
 }
 
-function NeuralKeysApp() {
+function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [mode, setMode] = useState<TrainingMode>("drill");
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("home-row");
   const [passageDifficulty, setPassageDifficulty] = useState<Passage["difficulty"]>("beginner");
@@ -87,7 +94,8 @@ function NeuralKeysApp() {
   useEffect(() => {
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
-      setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels), source: "" });
+      const targets = getProgress().practiceTargets;
+      setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels, targets), source: "" });
     } else {
       const cat = passageCategory === "all" ? undefined : passageCategory;
       const passage = getRandomPassage(passageDifficulty, cat);
@@ -97,7 +105,9 @@ function NeuralKeysApp() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchTip = useCallback(async (keyStrokes: KeyStroke[], text: string) => {
-    const patterns = detectErrorPatterns(keyStrokes, recentErrorsRef.current);
+    const timingMeta = computeSessionTimingMetadata(keyStrokes);
+    const progress = getProgress();
+    const patterns = detectErrorPatterns(keyStrokes, recentErrorsRef.current, timingMeta, progress.errorHeatmap);
     if (patterns.length === 0) return;
     setTipLoading(true);
     try {
@@ -105,7 +115,7 @@ function NeuralKeysApp() {
       const res = await fetch("/api/tips", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": apiKey || "" },
-        body: JSON.stringify({ prompt: buildTipPrompt(patterns, text) }),
+        body: JSON.stringify({ prompt: buildTipPrompt(patterns, text, timingMeta) }),
       });
       if (res.ok) {
         const { tip } = await res.json();
@@ -167,7 +177,17 @@ function NeuralKeysApp() {
       setSessionStats(stats);
       setIsActive(false);
       setSessionResults((prev) => [...prev, { wpm: stats.wpm, accuracy: stats.accuracy }]);
-      const updated = recordSession(stats, mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`);
+      const modeLabel = mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`;
+      const timingMetadata = computeSessionTimingMetadata(keyStrokes);
+      const enrichment = {
+        modeDetails: {
+          type: mode as "drill" | "passage",
+          level: mode === "drill" ? drillLevel : passageDifficulty,
+          category: mode === "passage" ? (passageCategory === "all" ? undefined : passageCategory) : undefined,
+        },
+        timingMetadata,
+      };
+      const { progress: updated, session } = recordSession(stats, modeLabel, enrichment);
       setUnlockVersion((v) => v + 1);
 
       // Award base XP + check achievements in one pass
@@ -196,8 +216,12 @@ function NeuralKeysApp() {
         setTimeout(() => setNewAchievements([]), 4000);
       }
 
+      // Update practice targets from analytics
+      const patterns = detectErrorPatterns(keyStrokes, recentErrorsRef.current, timingMetadata, updated.errorHeatmap);
+      updated.practiceTargets = updatePracticeTargets(updated.errorHeatmap, timingMetadata, patterns);
+
       localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
-      syncToRemote(updated);
+      syncToRemote(updated, session);
 
       // Auto-progression: advance drill level if next level just unlocked
       if (mode === "drill") {
@@ -209,7 +233,7 @@ function NeuralKeysApp() {
         }
       }
     },
-    [mode, drillLevel, passageDifficulty, unlockedDrillLevels]
+    [mode, drillLevel, passageDifficulty, passageCategory, unlockedDrillLevels]
   );
 
   const handleNext = useCallback(() => {
@@ -282,6 +306,14 @@ function NeuralKeysApp() {
             <Link href="/stats" className="text-neutral-400 hover:text-[#00ff88] transition-colors" title="Stats">
               <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
             </Link>
+            <button
+              onClick={onLogout}
+              className="text-neutral-600 hover:text-red-400 transition-colors"
+              aria-label="Logout"
+              title="Logout"
+            >
+              <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
@@ -315,6 +347,8 @@ function NeuralKeysApp() {
           threshold={UNLOCK_SESSIONS_REQUIRED}
           label={mode === "drill" ? drillLevel.replace("-", " ") : passageDifficulty}
         />
+
+        <AdaptiveTargetIndicator mode={mode} />
 
         {(isActive || sessionStats) && (
           <StatsDisplay
@@ -407,6 +441,26 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
       </div>
       <span className="text-xs text-neutral-600">
         {isMaxed ? "complete" : `${capped}/${threshold}`}
+      </span>
+    </div>
+  );
+}
+
+function AdaptiveTargetIndicator({ mode }: { mode: TrainingMode }) {
+  if (mode !== "drill") return null;
+  const targets = getProgress().practiceTargets;
+  if (!targets || (targets.chars.length === 0 && targets.bigrams.length === 0)) return null;
+
+  const allTargets = [
+    ...targets.chars.slice(0, 5).map((c) => c === " " ? "space" : c),
+    ...targets.bigrams.slice(0, 3).map((b) => `"${b}"`),
+  ];
+
+  return (
+    <div className="flex items-center gap-2" title={`Adaptive targeting: ${allTargets.join(", ")}`}>
+      <span className="text-xs text-amber-400">🎯</span>
+      <span className="text-xs text-neutral-500">
+        Targeting: <span className="text-amber-400/80">{allTargets.join(", ")}</span>
       </span>
     </div>
   );

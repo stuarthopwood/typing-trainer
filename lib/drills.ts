@@ -1,4 +1,4 @@
-import type { DrillConfig } from "./types";
+import type { DrillConfig, PracticeTargets } from "./types";
 
 export const DRILL_LEVELS: DrillConfig[] = [
   { level: "home-row", chars: "asdfghjkl;", label: "Home Row" },
@@ -101,22 +101,31 @@ import { DRILL_ORDER } from "./progress";
 
 const LEVEL_ORDER = DRILL_ORDER;
 
-export function generateDrillText(config: DrillConfig, length: number = 50, unlockedLevels?: Set<string>): string {
+export function generateDrillText(config: DrillConfig, length: number = 50, unlockedLevels?: Set<string>, targets?: PracticeTargets): string {
   const primaryWords = WORD_BANK[config.level] || WORD_BANK["full"];
   const mixWords = getMixWords(config.level, unlockedLevels);
+  const targetedWords = targets ? getTargetedWords(primaryWords, targets) : [];
 
   const selected: string[] = [];
   let currentLength = 0;
   let lastWord = "";
 
   while (currentLength < length) {
-    const useMix = mixWords.length > 0 && Math.random() < 0.2;
-    const pool = useMix ? mixWords : primaryWords;
-    let word = pool[Math.floor(Math.random() * pool.length)];
+    let word: string;
+    const roll = Math.random();
 
-    // Repeat words for reinforcement (30% chance to repeat the last word)
-    if (lastWord && !useMix && Math.random() < 0.3) {
-      word = lastWord;
+    if (targetedWords.length > 0 && roll < 0.4) {
+      // 40% targeted words
+      word = targetedWords[Math.floor(Math.random() * targetedWords.length)];
+    } else if (mixWords.length > 0 && roll < 0.6) {
+      // 20% mix (0.4-0.6 range)
+      word = mixWords[Math.floor(Math.random() * mixWords.length)];
+    } else {
+      // 40% normal random (or 60%+20% when no targets)
+      word = primaryWords[Math.floor(Math.random() * primaryWords.length)];
+      if (lastWord && Math.random() < 0.3) {
+        word = lastWord;
+      }
     }
 
     selected.push(word);
@@ -125,6 +134,31 @@ export function generateDrillText(config: DrillConfig, length: number = 50, unlo
   }
 
   return selected.join(" ");
+}
+
+function scoreWord(word: string, targets: PracticeTargets): number {
+  let score = 0;
+  const lower = word.toLowerCase();
+  for (const c of targets.chars) {
+    if (lower.includes(c.toLowerCase())) score += 2;
+  }
+  for (const bg of targets.bigrams) {
+    if (lower.includes(bg.toLowerCase())) score += 5;
+  }
+  return score;
+}
+
+function getTargetedWords(pool: string[], targets: PracticeTargets): string[] {
+  if (targets.chars.length === 0 && targets.bigrams.length === 0) return [];
+
+  const scored = pool
+    .map((word) => ({ word, score: scoreWord(word, targets) }))
+    .filter((w) => w.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  // Return top 30% of matching words for variety
+  const cutoff = Math.max(5, Math.ceil(scored.length * 0.3));
+  return scored.slice(0, cutoff).map((w) => w.word);
 }
 
 function getMixWords(currentLevel: string, unlockedLevels?: Set<string>): string[] {

@@ -13,6 +13,47 @@ export interface KeyStroke {
   actual: string;
   timestamp: number;
   correct: boolean;
+  keyUpTimestamp?: number;
+  holdDuration?: number;
+  interKeyDelay?: number;
+}
+
+export interface BigramTiming {
+  bigram: string;
+  avgDelay: number;
+  occurrences: number;
+}
+
+export interface SessionTimingMetadata {
+  avgHoldDuration: number;
+  avgInterKeyDelay: number;
+  slowestBigrams: BigramTiming[];
+  shortPresses: number;
+  consistencyScore: number;
+  fatigueRatio: number;
+}
+
+export interface EnrichedSessionSummary {
+  id: string;
+  timestamp: string;
+  date: string;
+  wpm: number;
+  accuracy: number;
+  mode: string;
+  duration: number;
+  charsTyped: number;
+  modeDetails: {
+    type: "drill" | "passage";
+    level?: string;
+    category?: string;
+  };
+  timingMetadata?: SessionTimingMetadata;
+}
+
+export interface PracticeTargets {
+  chars: string[];
+  bigrams: string[];
+  updatedAt: string;
 }
 
 export interface SessionStats {
