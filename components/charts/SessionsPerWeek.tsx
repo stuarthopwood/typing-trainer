@@ -35,6 +35,7 @@ export default function SessionsPerWeek({ sessions }: SessionsPerWeekProps) {
             contentStyle={{ backgroundColor: "#141414", border: "1px solid #333", borderRadius: "8px" }}
             labelStyle={{ color: "#999" }}
             itemStyle={{ color: "#00ff88" }}
+            cursor={false}
           />
           <Bar dataKey="count" fill="#00ff88" radius={[4, 4, 0, 0]} name="Sessions" />
         </BarChart>

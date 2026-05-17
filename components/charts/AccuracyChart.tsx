@@ -33,6 +33,7 @@ export default function AccuracyChart({ sessions }: AccuracyChartProps) {
             contentStyle={{ backgroundColor: "#141414", border: "1px solid #333", borderRadius: "8px" }}
             labelStyle={{ color: "#999" }}
             itemStyle={{ color: "#00ff88" }}
+            cursor={{ stroke: "#333", strokeWidth: 1 }}
           />
           <Line type="monotone" dataKey="accuracy" stroke="#00ff88" strokeWidth={1.5} dot={false} name="Accuracy %" />
           <Line type="monotone" dataKey="rolling" stroke="#00cc6a" strokeWidth={2} dot={false} strokeDasharray="5 5" name="7-day avg" />
