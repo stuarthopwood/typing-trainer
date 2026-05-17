@@ -119,3 +119,17 @@ npm run build    # production build check
 - Sound effects (optional)
 - Cross-device sync (PIN or similar, like the GCSE app)
 - Light mode toggle (currently dark-only by default)
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues at stuarthopwood/typing-trainer (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo — one `CONTEXT.md` + `docs/adr/` at root. See `docs/agents/domain.md`.

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DRILL_LEVELS, generateDrillText } from "@/lib/drills";
+import type { PracticeTargets } from "@/lib/types";
 
 describe("Drills — Level Configuration", () => {
   it("should have 6 drill levels", () => {
@@ -56,5 +57,65 @@ describe("Drills — Text Generation", () => {
     const a = generateDrillText(config, 40);
     const b = generateDrillText(config, 40);
     expect(a).not.toBe(b);
+  });
+});
+
+describe("Drills — Adaptive Targeting", () => {
+  it("should bias toward words containing target chars", () => {
+    const config = DRILL_LEVELS[0]; // home-row
+    const targets: PracticeTargets = {
+      chars: ["s", "h"],
+      bigrams: ["sh"],
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Generate many samples and check that target chars appear more frequently
+    let targetCharCount = 0;
+    let totalChars = 0;
+    for (let i = 0; i < 20; i++) {
+      const text = generateDrillText(config, 100, undefined, targets);
+      for (const c of text) {
+        totalChars++;
+        if (c === "s" || c === "h") targetCharCount++;
+      }
+    }
+
+    // With targeting, "s" and "h" should appear in > 15% of characters
+    // (home-row words naturally contain them, but targeting should boost)
+    const ratio = targetCharCount / totalChars;
+    expect(ratio).toBeGreaterThan(0.15);
+  });
+
+  it("should still work without targets (no crash)", () => {
+    const config = DRILL_LEVELS[0];
+    const text = generateDrillText(config, 40, undefined, undefined);
+    expect(text.length).toBeGreaterThan(0);
+  });
+
+  it("should still work with empty targets", () => {
+    const config = DRILL_LEVELS[0];
+    const targets: PracticeTargets = { chars: [], bigrams: [], updatedAt: "" };
+    const text = generateDrillText(config, 40, undefined, targets);
+    expect(text.length).toBeGreaterThan(0);
+  });
+
+  it("should contain target bigram in output when targeting", () => {
+    const config = DRILL_LEVELS[0]; // home-row — "sh" words exist (slash, flash, etc.)
+    const targets: PracticeTargets = {
+      chars: [],
+      bigrams: ["sh"],
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Run enough trials that at least one should hit
+    let foundBigram = false;
+    for (let i = 0; i < 30; i++) {
+      const text = generateDrillText(config, 100, undefined, targets);
+      if (text.includes("sh")) {
+        foundBigram = true;
+        break;
+      }
+    }
+    expect(foundBigram).toBe(true);
   });
 });

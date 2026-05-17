@@ -45,26 +45,26 @@ describe("Progress — Recording Sessions", () => {
   };
 
   it("should increment total sessions", () => {
-    const p = recordSession(mockStats, "passage");
+    const { progress: p } = recordSession(mockStats, "passage");
     expect(p.totalSessions).toBe(1);
   });
 
   it("should track best WPM", () => {
-    const p = recordSession(mockStats, "passage");
+    const { progress: p } = recordSession(mockStats, "passage");
     expect(p.bestWpm).toBe(45);
   });
 
   it("should update error heatmap", () => {
-    const p = recordSession(mockStats, "passage");
+    const { progress: p } = recordSession(mockStats, "passage");
     expect(p.errorHeatmap["a"]).toBe(1);
   });
 
-  it("should keep recent sessions capped at 20", () => {
-    let p = getProgress();
+  it("should keep recent sessions capped at 50", () => {
     const stats: SessionStats = { ...mockStats };
-    for (let i = 0; i < 25; i++) {
-      p = recordSession(stats, "drill:home-row");
+    for (let i = 0; i < 55; i++) {
+      recordSession(stats, "drill:home-row");
     }
-    expect(p.recentSessions.length).toBeLessThanOrEqual(20);
+    const p = getProgress();
+    expect(p.recentSessions.length).toBeLessThanOrEqual(50);
   });
 });

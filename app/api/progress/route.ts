@@ -16,7 +16,7 @@ function isAuthorized(req: NextRequest): boolean {
   return timingSafeEqual(Buffer.from(key), Buffer.from(expected));
 }
 
-const MAX_BODY_SIZE = 100 * 1024; // 100KB
+const MAX_BODY_SIZE = 2 * 1024 * 1024; // 2MB
 
 function validateProgressData(data: unknown): data is Record<string, unknown> {
   if (!data || typeof data !== "object") return false;
@@ -26,8 +26,17 @@ function validateProgressData(data: unknown): data is Record<string, unknown> {
   if (typeof d.bestWpm !== "number") return false;
   if (typeof d.bestAccuracy !== "number") return false;
   if (!Array.isArray(d.recentSessions)) return false;
-  if (d.recentSessions.length > 50) return false;
   return true;
+}
+
+async function loadExistingBlob(blobPath: string, token: string): Promise<Record<string, unknown> | null> {
+  try {
+    const metadata = await head(blobPath, { token });
+    const response = await fetch(metadata.url);
+    return await response.json();
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -49,6 +58,14 @@ export async function GET(req: NextRequest) {
     const metadata = await head(blobPath, { token });
     const response = await fetch(metadata.url);
     const data = await response.json();
+
+    const full = req.nextUrl.searchParams.get("full");
+    if (full !== "true" && data.allSessions) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { allSessions: _, ...withoutHistory } = data;
+      return NextResponse.json(withoutHistory);
+    }
+
     return NextResponse.json(data);
   } catch {
     return NextResponse.json(null, { status: 404 });
@@ -80,7 +97,26 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Invalid data" }, { status: 422 });
   }
 
-  await put(blobPath, JSON.stringify(body), {
+  const { newSession, ...progressData } = body as Record<string, unknown> & { newSession?: unknown };
+
+  // If a new session was provided, append it to allSessions in the Blob
+  let allSessions: unknown[] = [];
+  if (newSession && typeof newSession === "object") {
+    const existing = await loadExistingBlob(blobPath, token);
+    if (existing?.allSessions && Array.isArray(existing.allSessions)) {
+      allSessions = existing.allSessions;
+    }
+    allSessions.push(newSession);
+  } else {
+    const existing = await loadExistingBlob(blobPath, token);
+    if (existing?.allSessions && Array.isArray(existing.allSessions)) {
+      allSessions = existing.allSessions;
+    }
+  }
+
+  const dataToStore = { ...progressData, allSessions };
+
+  await put(blobPath, JSON.stringify(dataToStore), {
     access: "public",
     addRandomSuffix: false,
     token,

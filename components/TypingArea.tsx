@@ -19,6 +19,7 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
   const [shakeError, setShakeError] = useState(false);
   const [capsLockOn, setCapsLockOn] = useState(false);
   const keyStrokesRef = useRef<KeyStroke[]>([]);
+  const pendingKeysRef = useRef<Map<string, { timestamp: number; strokeIndex: number }>>(new Map());
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -52,15 +53,24 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
       const expected = text[position];
       const actual = e.key === "Enter" ? "\n" : e.key;
       const correct = actual === expected;
+      const now = performance.now();
+
+      const prevStroke = keyStrokesRef.current[keyStrokesRef.current.length - 1];
+      const interKeyDelay = prevStroke?.keyUpTimestamp
+        ? now - prevStroke.keyUpTimestamp
+        : undefined;
 
       const stroke: KeyStroke = {
         expected,
         actual,
-        timestamp: performance.now(),
+        timestamp: now,
         correct,
+        interKeyDelay,
       };
 
+      const strokeIndex = keyStrokesRef.current.length;
       keyStrokesRef.current.push(stroke);
+      pendingKeysRef.current.set(e.code, { timestamp: now, strokeIndex });
       onKeyPress?.(e.key, e.code, correct);
 
       if (!correct) {
@@ -95,11 +105,29 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const pending = pendingKeysRef.current.get(e.code);
+      if (pending) {
+        const now = performance.now();
+        const stroke = keyStrokesRef.current[pending.strokeIndex];
+        if (stroke) {
+          stroke.keyUpTimestamp = now;
+          stroke.holdDuration = now - pending.timestamp;
+        }
+        pendingKeysRef.current.delete(e.code);
+      }
+    };
+    window.addEventListener("keyup", handleKeyUp);
+    return () => window.removeEventListener("keyup", handleKeyUp);
+  }, []);
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setPosition(0);
     setErrors(new Set());
     keyStrokesRef.current = [];
+    pendingKeysRef.current.clear();
     setCelebration("none");
   }, [text]);
   /* eslint-enable react-hooks/set-state-in-effect */

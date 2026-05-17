@@ -54,7 +54,7 @@ describe("Progress — mergeProgress", () => {
   });
 
   it("should deduplicate recentSessions", () => {
-    const session = { date: "2025-01-15", wpm: 45, accuracy: 92, mode: "drill:home-row" };
+    const session = { id: "abc", timestamp: "2025-01-15T12:00:00Z", date: "2025-01-15", wpm: 45, accuracy: 92, mode: "drill:home-row", duration: 30000, charsTyped: 100, modeDetails: { type: "drill" as const, level: "home-row" } };
     const local: ProgressData = { ...baseProgress, recentSessions: [session] };
     const remote: ProgressData = { ...baseProgress, recentSessions: [session] };
 
@@ -62,20 +62,25 @@ describe("Progress — mergeProgress", () => {
     expect(merged.recentSessions).toHaveLength(1);
   });
 
-  it("should keep recentSessions capped at 20", () => {
+  it("should keep recentSessions capped at 50", () => {
     const makeSessions = (count: number, prefix: string) =>
       Array.from({ length: count }, (_, i) => ({
+        id: `${prefix}-${i}`,
+        timestamp: `2025-01-${String(i + 1).padStart(2, "0")}T12:00:00Z`,
         date: `2025-01-${String(i + 1).padStart(2, "0")}`,
         wpm: 40 + i,
         accuracy: 90,
         mode: `${prefix}:${i}`,
+        duration: 30000,
+        charsTyped: 100,
+        modeDetails: { type: "drill" as const },
       }));
 
-    const local: ProgressData = { ...baseProgress, recentSessions: makeSessions(15, "local") };
-    const remote: ProgressData = { ...baseProgress, recentSessions: makeSessions(15, "remote") };
+    const local: ProgressData = { ...baseProgress, recentSessions: makeSessions(30, "local") };
+    const remote: ProgressData = { ...baseProgress, recentSessions: makeSessions(30, "remote") };
 
     const merged = mergeProgress(local, remote);
-    expect(merged.recentSessions.length).toBeLessThanOrEqual(20);
+    expect(merged.recentSessions.length).toBeLessThanOrEqual(50);
   });
 
   it("should merge achievements keeping earliest unlock date", () => {
@@ -264,27 +269,27 @@ describe("Progress — recordSession level progression", () => {
   });
 
   it("should increment levelProgress when accuracy >= 85", () => {
-    const p = recordSession(makeStats(85), "drill:home-row");
+    const { progress: p } = recordSession(makeStats(85), "drill:home-row");
     expect(p.levelProgress["drill:home-row"]).toBe(1);
   });
 
   it("should NOT increment levelProgress when accuracy < 85", () => {
-    const p = recordSession(makeStats(84), "drill:home-row");
+    const { progress: p } = recordSession(makeStats(84), "drill:home-row");
     expect(p.levelProgress["drill:home-row"]).toBeUndefined();
   });
 
   it("should increment existing levelProgress", () => {
     recordSession(makeStats(90), "drill:home-row");
-    const p = recordSession(makeStats(90), "drill:home-row");
+    const { progress: p } = recordSession(makeStats(90), "drill:home-row");
     expect(p.levelProgress["drill:home-row"]).toBe(2);
   });
 
-  it("should cap recentSessions at 20", () => {
+  it("should cap recentSessions at 50", () => {
     const stats = makeStats(90);
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 55; i++) {
       recordSession(stats, "drill:home-row");
     }
     const p = getProgress();
-    expect(p.recentSessions.length).toBeLessThanOrEqual(20);
+    expect(p.recentSessions.length).toBeLessThanOrEqual(50);
   });
 });

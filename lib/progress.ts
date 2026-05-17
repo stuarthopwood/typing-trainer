@@ -1,4 +1,4 @@
-import type { SessionStats } from "./types";
+import type { SessionStats, EnrichedSessionSummary, SessionTimingMetadata, PracticeTargets } from "./types";
 
 export interface ProgressData {
   totalSessions: number;
@@ -8,19 +8,18 @@ export interface ProgressData {
   currentStreak: number;
   bestStreak: number;
   lastSessionDate: string;
-  recentSessions: SessionSummary[];
+  recentSessions: EnrichedSessionSummary[];
   errorHeatmap: Record<string, number>;
   levelProgress: Record<string, number>;
   xp: number;
   achievements: { id: string; unlockedAt: string }[];
   tips: { text: string; createdAt: string }[];
+  practiceTargets?: PracticeTargets;
 }
 
-interface SessionSummary {
-  date: string;
-  wpm: number;
-  accuracy: number;
-  mode: string;
+export interface SessionEnrichment {
+  modeDetails: { type: "drill" | "passage"; level?: string; category?: string };
+  timingMetadata?: SessionTimingMetadata;
 }
 
 const STORAGE_KEY = "typing-trainer-progress";
@@ -46,9 +45,10 @@ export function getProgress(): ProgressData {
   }
 }
 
-export function recordSession(stats: SessionStats, mode: string): ProgressData {
+export function recordSession(stats: SessionStats, mode: string, enrichment?: SessionEnrichment): { progress: ProgressData; session: EnrichedSessionSummary } {
   const progress = getProgress();
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
 
   progress.totalSessions += 1;
   progress.totalCharsTyped += stats.totalChars;
@@ -70,10 +70,20 @@ export function recordSession(stats: SessionStats, mode: string): ProgressData {
 
   progress.lastSessionDate = today;
 
-  progress.recentSessions = [
-    { date: today, wpm: stats.wpm, accuracy: stats.accuracy, mode },
-    ...progress.recentSessions,
-  ].slice(0, 20);
+  const session: EnrichedSessionSummary = {
+    id: crypto.randomUUID(),
+    timestamp: now.toISOString(),
+    date: today,
+    wpm: stats.wpm,
+    accuracy: stats.accuracy,
+    mode,
+    duration: stats.duration,
+    charsTyped: stats.totalChars,
+    modeDetails: enrichment?.modeDetails ?? { type: mode.startsWith("drill") ? "drill" : "passage" },
+    timingMetadata: enrichment?.timingMetadata,
+  };
+
+  progress.recentSessions = [session, ...progress.recentSessions].slice(0, 50);
 
   if (stats.accuracy >= 85) {
     progress.levelProgress[mode] = (progress.levelProgress[mode] || 0) + 1;
@@ -88,7 +98,7 @@ export function recordSession(stats: SessionStats, mode: string): ProgressData {
   if (typeof localStorage !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   }
-  return progress;
+  return { progress, session };
 }
 
 function yesterday(): string {
@@ -170,15 +180,18 @@ export function clearUserPin(): void {
   localStorage.removeItem("neuralkeys-pin");
 }
 
-export async function syncToRemote(progress: ProgressData): Promise<void> {
+export async function syncToRemote(progress: ProgressData, newSession?: EnrichedSessionSummary): Promise<void> {
   const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
   const pin = getUserPin();
   if (!apiKey || !pin) return;
   try {
+    const payload = newSession
+      ? { ...progress, newSession }
+      : progress;
     await fetch("/api/progress", {
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "x-user-pin": pin },
-      body: JSON.stringify(progress),
+      body: JSON.stringify(payload),
     });
   } catch {
     // Silent fail — local data is the source of truth, remote is backup
@@ -205,6 +218,25 @@ export async function loadFromRemote(): Promise<ProgressData | null> {
   }
 }
 
+export async function loadFullHistory(): Promise<EnrichedSessionSummary[]> {
+  const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
+  const pin = getUserPin();
+  if (!apiKey || !pin) return getProgress().recentSessions;
+  try {
+    const res = await fetch(`/api/progress?full=true`, {
+      headers: { "x-api-key": apiKey, "x-user-pin": pin },
+    });
+    if (!res.ok) return getProgress().recentSessions;
+    const data = await res.json();
+    if (data?.allSessions && Array.isArray(data.allSessions)) {
+      return data.allSessions;
+    }
+    return data?.recentSessions || getProgress().recentSessions;
+  } catch {
+    return getProgress().recentSessions;
+  }
+}
+
 export function mergeProgress(local: ProgressData, remote: ProgressData): ProgressData {
   return {
     totalSessions: Math.max(local.totalSessions, remote.totalSessions),
@@ -223,17 +255,17 @@ export function mergeProgress(local: ProgressData, remote: ProgressData): Progre
   };
 }
 
-function mergeRecentSessions(a: SessionSummary[], b: SessionSummary[]): SessionSummary[] {
+function mergeRecentSessions(a: EnrichedSessionSummary[], b: EnrichedSessionSummary[]): EnrichedSessionSummary[] {
   const seen = new Set<string>();
-  const merged: SessionSummary[] = [];
+  const merged: EnrichedSessionSummary[] = [];
   for (const s of [...a, ...b]) {
-    const key = `${s.date}:${s.mode}:${s.wpm}:${s.accuracy}`;
+    const key = s.id || `${s.date}:${s.mode}:${s.wpm}:${s.accuracy}`;
     if (!seen.has(key)) {
       seen.add(key);
       merged.push(s);
     }
   }
-  return merged.sort((x, y) => y.date.localeCompare(x.date)).slice(0, 20);
+  return merged.sort((x, y) => (y.timestamp || y.date).localeCompare(x.timestamp || x.date)).slice(0, 50);
 }
 
 function mergeHeatmaps(a: Record<string, number>, b: Record<string, number>): Record<string, number> {
