@@ -48,6 +48,8 @@ export default function StatsPage() {
       ? Math.round(sessions.reduce((sum, s) => sum + s.wpm, 0) / sessions.length)
       : 0;
 
+  const hasBigramData = sessions.some((s) => s.timingMetadata?.slowestBigrams && s.timingMetadata.slowestBigrams.length > 0);
+
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-[#0d0d0d]">
       <header className="dark:bg-[#141414] border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm">
@@ -154,24 +156,34 @@ export default function StatsPage() {
         )}
 
         {/* Row 3: Performance charts (WPM + Accuracy side by side) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel><WpmChart sessions={sessions} /></Panel>
-          <Panel><AccuracyChart sessions={sessions} /></Panel>
-        </div>
+        {sessions.length >= 2 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Panel><WpmChart sessions={sessions} /></Panel>
+            <Panel><AccuracyChart sessions={sessions} /></Panel>
+          </div>
+        )}
 
         {/* Row 4: Analytics summary */}
-        <Panel><AnalyticsSummary sessions={sessions} /></Panel>
+        {sessions.length >= 3 && (
+          <Panel><AnalyticsSummary sessions={sessions} /></Panel>
+        )}
 
         {/* Row 5: Activity (Practice heatmap + Sessions per week) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel><PracticeHeatmap sessions={sessions} /></Panel>
-          <Panel><SessionsPerWeek sessions={sessions} /></Panel>
-        </div>
+        {sessions.length >= 2 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {sessions.length > 0 && <Panel><PracticeHeatmap sessions={sessions} /></Panel>}
+            <Panel><SessionsPerWeek sessions={sessions} /></Panel>
+          </div>
+        )}
 
         {/* Row 6: Weaknesses (Error distribution + Slow bigrams) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel><ErrorDistribution errorHeatmap={progress.errorHeatmap} /></Panel>
-          <Panel><BigramChart sessions={sessions} /></Panel>
+          {Object.keys(progress.errorHeatmap).length > 0 && (
+            <Panel><ErrorDistribution errorHeatmap={progress.errorHeatmap} /></Panel>
+          )}
+          {hasBigramData && (
+            <Panel><BigramChart sessions={sessions} /></Panel>
+          )}
         </div>
 
         {/* Row 7: Deeper analysis (Mode breakdown + Keyboard heatmap) */}
