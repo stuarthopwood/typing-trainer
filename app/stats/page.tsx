@@ -58,6 +58,7 @@ export default function StatsPage() {
             <Link
               href="/"
               className="text-neutral-400 hover:text-[#00ff88] transition-colors"
+              aria-label="Back to typing"
             >
               <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
             </Link>
