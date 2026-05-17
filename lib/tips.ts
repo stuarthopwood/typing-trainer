@@ -236,12 +236,13 @@ export function buildTipPrompt(patterns: ErrorPattern[], currentText: string, ti
     if (parts.length > 0) timingContext = `\n\nTiming analysis:\n${parts.join("\n")}`;
   }
 
-  return `You are a typing coach. Based on these error patterns from a typing exercise, give ONE short, actionable tip (max 20 words) to help improve. Be specific and encouraging. If you see timing data, reference it in your tip.
+  return `You are a typing coach. Based on these error patterns from a typing exercise, provide a tip with explanation.
 
 Text being typed: "${currentText.slice(0, 80)}..."
 
 Error patterns detected:
 ${patternDescriptions}${timingContext}
 
-Reply with ONLY the tip, no prefix, no quotes, no explanation.`;
+Reply with ONLY valid JSON in this exact format (no markdown, no backticks):
+{"tip":"<short actionable tip, max 20 words>","explanation":"<2-3 sentences explaining WHY this helps and HOW to practice it>"}`;
 }

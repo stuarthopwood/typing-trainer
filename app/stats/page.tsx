@@ -132,15 +132,9 @@ export default function StatsPage() {
           {progress.tips && progress.tips.length > 0 && (
             <Panel>
               <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">AI Tips</h2>
-              <div className="space-y-2 max-h-72 overflow-y-auto">
-                {progress.tips.slice(0, 8).map((tip, i) => (
-                  <div key={i} className="flex items-start gap-2 px-3 py-2 rounded bg-neutral-800/40">
-                    <span className="text-amber-400 mt-0.5 text-sm">💡</span>
-                    <div>
-                      <p className="text-sm text-neutral-300">{tip.text}</p>
-                      <p className="text-[10px] text-neutral-600 mt-0.5">{tip.createdAt.split("T")[0]}</p>
-                    </div>
-                  </div>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {progress.tips.slice(0, 10).map((tip, i) => (
+                  <TipItem key={i} text={tip.text} explanation={tip.explanation} date={tip.createdAt.split("T")[0]} />
                 ))}
               </div>
             </Panel>
@@ -227,6 +221,36 @@ function BigStat({
         <FontAwesomeIcon icon={icon} className="w-3 h-3" />
         {label}
       </div>
+    </div>
+  );
+}
+
+function TipItem({ text, explanation, date }: { text: string; explanation?: string; date: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasExplanation = !!explanation;
+
+  return (
+    <div
+      className={`rounded-lg transition-colors ${hasExplanation ? "cursor-pointer hover:bg-neutral-700/40" : ""} bg-neutral-800/40`}
+      onClick={() => hasExplanation && setExpanded(!expanded)}
+    >
+      <div className="flex items-start gap-2 px-3 py-2">
+        <span className="text-amber-400 mt-0.5 text-sm">💡</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-neutral-300">{text}</p>
+          <p className="text-[10px] text-neutral-600 mt-0.5">{date}</p>
+        </div>
+        {hasExplanation && (
+          <span className={`text-neutral-600 text-xs mt-1 transition-transform ${expanded ? "rotate-180" : ""}`}>
+            ▾
+          </span>
+        )}
+      </div>
+      {expanded && explanation && (
+        <div className="px-3 pb-3 pt-0 ml-7">
+          <p className="text-xs text-neutral-400 leading-relaxed">{explanation}</p>
+        </div>
+      )}
     </div>
   );
 }

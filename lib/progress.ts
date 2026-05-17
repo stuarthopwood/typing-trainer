@@ -13,7 +13,7 @@ export interface ProgressData {
   levelProgress: Record<string, number>;
   xp: number;
   achievements: { id: string; unlockedAt: string }[];
-  tips: { text: string; createdAt: string }[];
+  tips: { text: string; explanation?: string; createdAt: string }[];
   practiceTargets?: PracticeTargets;
 }
 
@@ -284,9 +284,9 @@ function mergeLevelProgress(a: Record<string, number>, b: Record<string, number>
   return result;
 }
 
-function mergeTips(a: { text: string; createdAt: string }[], b: { text: string; createdAt: string }[]): { text: string; createdAt: string }[] {
+function mergeTips(a: { text: string; explanation?: string; createdAt: string }[], b: { text: string; explanation?: string; createdAt: string }[]): { text: string; explanation?: string; createdAt: string }[] {
   const seen = new Set<string>();
-  const merged: { text: string; createdAt: string }[] = [];
+  const merged: { text: string; explanation?: string; createdAt: string }[] = [];
   for (const t of [...a, ...b]) {
     if (!seen.has(t.text)) {
       seen.add(t.text);

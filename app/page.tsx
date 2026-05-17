@@ -118,11 +118,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
         body: JSON.stringify({ prompt: buildTipPrompt(patterns, text, timingMeta) }),
       });
       if (res.ok) {
-        const { tip } = await res.json();
+        const { tip, explanation } = await res.json();
         if (tip) {
           setCurrentTip(tip);
           const progress = getProgress();
-          progress.tips = [{ text: tip, createdAt: new Date().toISOString() }, ...(progress.tips || [])].slice(0, 20);
+          progress.tips = [{ text: tip, explanation, createdAt: new Date().toISOString() }, ...(progress.tips || [])].slice(0, 20);
           localStorage.setItem("typing-trainer-progress", JSON.stringify(progress));
         }
       }

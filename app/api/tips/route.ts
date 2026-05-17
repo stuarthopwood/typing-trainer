@@ -17,12 +17,20 @@ export async function POST(req: NextRequest) {
   try {
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 100,
+      max_tokens: 200,
       messages: [{ role: "user", content: prompt }],
     });
 
     const text = message.content[0]?.type === "text" ? message.content[0].text : "";
-    return NextResponse.json({ tip: text.trim() });
+    try {
+      const parsed = JSON.parse(text.trim());
+      if (parsed.tip && parsed.explanation) {
+        return NextResponse.json({ tip: parsed.tip, explanation: parsed.explanation });
+      }
+      return NextResponse.json({ tip: parsed.tip || text.trim() });
+    } catch {
+      return NextResponse.json({ tip: text.trim() });
+    }
   } catch {
     return NextResponse.json({ error: "AI unavailable" }, { status: 503 });
   }
