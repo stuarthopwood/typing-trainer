@@ -42,6 +42,20 @@ export default function AnalyticsSummary({ sessions }: AnalyticsSummaryProps) {
   const fatigueLabel = lastFatigue > 1.3 ? "High" : lastFatigue > 1.15 ? "Moderate" : "Low";
   const fatigueColor = lastFatigue > 1.3 ? "text-red-400" : lastFatigue > 1.15 ? "text-amber-400" : "text-[#00ff88]";
 
+  const handSessions = sessionsWithTiming.filter((s) => s.timingMetadata?.leftHand && s.timingMetadata?.rightHand);
+  const avgLeftErrorRate = handSessions.length > 0
+    ? Math.round(handSessions.reduce((sum, s) => sum + (s.timingMetadata?.leftHand.errorRate ?? 0), 0) / handSessions.length)
+    : null;
+  const avgRightErrorRate = handSessions.length > 0
+    ? Math.round(handSessions.reduce((sum, s) => sum + (s.timingMetadata?.rightHand.errorRate ?? 0), 0) / handSessions.length)
+    : null;
+  const avgLeftDelay = handSessions.length > 0
+    ? Math.round(handSessions.reduce((sum, s) => sum + (s.timingMetadata?.leftHand.avgDelay ?? 0), 0) / handSessions.length)
+    : 0;
+  const avgRightDelay = handSessions.length > 0
+    ? Math.round(handSessions.reduce((sum, s) => sum + (s.timingMetadata?.rightHand.avgDelay ?? 0), 0) / handSessions.length)
+    : 0;
+
   const formatHour = (h: number) => {
     if (h === 0) return "12am";
     if (h < 12) return `${h}am`;
@@ -69,6 +83,22 @@ export default function AnalyticsSummary({ sessions }: AnalyticsSummaryProps) {
           <AnalyticCard label="Peak Hour" value={formatHour(bestHour.hour)} subtitle={`${bestHour.avgWpm} WPM avg`} />
         )}
         <AnalyticCard label="Personal Records" value={`${records.length}`} />
+        {avgLeftErrorRate !== null && avgRightErrorRate !== null && (
+          <>
+            <AnalyticCard
+              label="Left Hand"
+              value={`${avgLeftErrorRate}%`}
+              subtitle={`error rate (${avgLeftDelay}ms avg)`}
+              valueColor={avgLeftErrorRate > avgRightErrorRate * 1.3 ? "text-red-400" : "text-neutral-200"}
+            />
+            <AnalyticCard
+              label="Right Hand"
+              value={`${avgRightErrorRate}%`}
+              subtitle={`error rate (${avgRightDelay}ms avg)`}
+              valueColor={avgRightErrorRate > avgLeftErrorRate * 1.3 ? "text-red-400" : "text-neutral-200"}
+            />
+          </>
+        )}
       </div>
     </div>
   );

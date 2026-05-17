@@ -24,6 +24,13 @@ export interface BigramTiming {
   occurrences: number;
 }
 
+export interface HandStats {
+  errors: number;
+  total: number;
+  errorRate: number;
+  avgDelay: number;
+}
+
 export interface SessionTimingMetadata {
   avgHoldDuration: number;
   avgInterKeyDelay: number;
@@ -31,6 +38,8 @@ export interface SessionTimingMetadata {
   shortPresses: number;
   consistencyScore: number;
   fatigueRatio: number;
+  leftHand: HandStats;
+  rightHand: HandStats;
 }
 
 export interface EnrichedSessionSummary {

@@ -233,6 +233,17 @@ export function buildTipPrompt(patterns: ErrorPattern[], currentText: string, ti
     if (timingMetadata.slowestBigrams.length > 0) {
       parts.push(`Slowest pairs: ${timingMetadata.slowestBigrams.slice(0, 3).map((b: BigramTiming) => `"${b.bigram}" ${b.avgDelay}ms`).join(", ")}`);
     }
+    if (timingMetadata.leftHand && timingMetadata.rightHand) {
+      const l = timingMetadata.leftHand;
+      const r = timingMetadata.rightHand;
+      parts.push(`Left hand: ${l.errorRate}% error rate, ${l.avgDelay}ms avg delay (${l.total} keys)`);
+      parts.push(`Right hand: ${r.errorRate}% error rate, ${r.avgDelay}ms avg delay (${r.total} keys)`);
+      if (l.errorRate > r.errorRate * 1.5 && l.total > 5) {
+        parts.push(`⚠️ Left hand significantly weaker (${l.errorRate}% vs ${r.errorRate}% errors)`);
+      } else if (r.errorRate > l.errorRate * 1.5 && r.total > 5) {
+        parts.push(`⚠️ Right hand significantly weaker (${r.errorRate}% vs ${l.errorRate}% errors)`);
+      }
+    }
     if (parts.length > 0) timingContext = `\n\nTiming analysis:\n${parts.join("\n")}`;
   }
 
