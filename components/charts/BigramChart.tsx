@@ -41,6 +41,7 @@ export default function BigramChart({ sessions }: BigramChartProps) {
             labelStyle={{ color: "#999" }}
             itemStyle={{ color: "#f59e0b" }}
             formatter={(value) => [`${value}ms`, "Avg delay"]}
+            cursor={false}
           />
           <Bar dataKey="avgMs" fill="#f59e0b" radius={[0, 4, 4, 0]} name="Avg delay" />
         </BarChart>

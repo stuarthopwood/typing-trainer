@@ -266,6 +266,8 @@ describe("Analytics — updatePracticeTargets", () => {
       shortPresses: 0,
       consistencyScore: 50,
       fatigueRatio: 1.0,
+      leftHand: { errors: 0, total: 10, errorRate: 0, avgDelay: 100 },
+      rightHand: { errors: 0, total: 10, errorRate: 0, avgDelay: 100 },
     };
     const targets = updatePracticeTargets({}, timing, []);
     expect(targets.bigrams).toContain("th");

@@ -1,5 +1,73 @@
-import type { KeyStroke, BigramTiming, SessionTimingMetadata, EnrichedSessionSummary, PracticeTargets } from "./types";
+import type { KeyStroke, BigramTiming, SessionTimingMetadata, EnrichedSessionSummary, PracticeTargets, HandStats } from "./types";
 import type { ErrorPattern } from "./tips";
+
+const LEFT_HAND_CHARS = new Set([
+  "q", "w", "e", "r", "t",
+  "a", "s", "d", "f", "g",
+  "z", "x", "c", "v", "b",
+  "1", "2", "3", "4", "5",
+  "`", "~", "!", "@", "#", "$", "%",
+  "Q", "W", "E", "R", "T",
+  "A", "S", "D", "F", "G",
+  "Z", "X", "C", "V", "B",
+]);
+
+const RIGHT_HAND_CHARS = new Set([
+  "y", "u", "i", "o", "p",
+  "h", "j", "k", "l", ";",
+  "n", "m", ",", ".", "/",
+  "6", "7", "8", "9", "0",
+  "^", "&", "*", "(", ")", "-", "_", "=", "+",
+  "[", "]", "{", "}", "\\", "|", "'", "\"", ":", "?", "<", ">",
+  "Y", "U", "I", "O", "P",
+  "H", "J", "K", "L",
+  "N", "M",
+]);
+
+export function getHand(char: string): "left" | "right" | "neither" {
+  if (LEFT_HAND_CHARS.has(char)) return "left";
+  if (RIGHT_HAND_CHARS.has(char)) return "right";
+  return "neither";
+}
+
+export function computeHandStats(keyStrokes: KeyStroke[]): { left: HandStats; right: HandStats } {
+  let leftErrors = 0, leftTotal = 0, rightErrors = 0, rightTotal = 0;
+  const leftDelays: number[] = [];
+  const rightDelays: number[] = [];
+
+  for (let i = 0; i < keyStrokes.length; i++) {
+    const stroke = keyStrokes[i];
+    const hand = getHand(stroke.expected);
+    if (hand === "neither") continue;
+
+    const delay = i > 0 ? stroke.timestamp - keyStrokes[i - 1].timestamp : 0;
+
+    if (hand === "left") {
+      leftTotal++;
+      if (!stroke.correct) leftErrors++;
+      if (delay > 0 && delay < 5000) leftDelays.push(delay);
+    } else {
+      rightTotal++;
+      if (!stroke.correct) rightErrors++;
+      if (delay > 0 && delay < 5000) rightDelays.push(delay);
+    }
+  }
+
+  return {
+    left: {
+      errors: leftErrors,
+      total: leftTotal,
+      errorRate: leftTotal > 0 ? Math.round((leftErrors / leftTotal) * 100) : 0,
+      avgDelay: leftDelays.length > 0 ? Math.round(leftDelays.reduce((a, b) => a + b, 0) / leftDelays.length) : 0,
+    },
+    right: {
+      errors: rightErrors,
+      total: rightTotal,
+      errorRate: rightTotal > 0 ? Math.round((rightErrors / rightTotal) * 100) : 0,
+      avgDelay: rightDelays.length > 0 ? Math.round(rightDelays.reduce((a, b) => a + b, 0) / rightDelays.length) : 0,
+    },
+  };
+}
 
 export function computeBigramTimings(keyStrokes: KeyStroke[]): BigramTiming[] {
   const bigramDelays: Record<string, number[]> = {};
@@ -86,6 +154,8 @@ export function computeSessionTimingMetadata(keyStrokes: KeyStroke[]): SessionTi
 
   const shortPresses = holdDurations.filter((d) => d < 30).length;
 
+  const handStats = computeHandStats(keyStrokes);
+
   return {
     avgHoldDuration,
     avgInterKeyDelay,
@@ -93,6 +163,8 @@ export function computeSessionTimingMetadata(keyStrokes: KeyStroke[]): SessionTi
     shortPresses,
     consistencyScore: computeConsistencyScore(keyStrokes),
     fatigueRatio: computeFatigueRatio(keyStrokes),
+    leftHand: handStats.left,
+    rightHand: handStats.right,
   };
 }
 

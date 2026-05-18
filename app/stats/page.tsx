@@ -48,6 +48,8 @@ export default function StatsPage() {
       ? Math.round(sessions.reduce((sum, s) => sum + s.wpm, 0) / sessions.length)
       : 0;
 
+  const hasBigramData = sessions.some((s) => s.timingMetadata?.slowestBigrams && s.timingMetadata.slowestBigrams.length > 0);
+
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-[#0d0d0d]">
       <header className="dark:bg-[#141414] border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm">
@@ -56,6 +58,7 @@ export default function StatsPage() {
             <Link
               href="/"
               className="text-neutral-400 hover:text-[#00ff88] transition-colors"
+              aria-label="Back to typing"
             >
               <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
             </Link>
@@ -105,45 +108,41 @@ export default function StatsPage() {
         </div>
 
         {/* Row 2: Recent Sessions + AI Tips (actionable items at the top) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {sessions.length > 0 && (
-            <Panel>
-              <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">Recent Sessions</h2>
-              <div className="space-y-1.5 max-h-72 overflow-y-auto">
-                {sessions.slice(0, 15).map((session, i) => (
-                  <div key={session.id || i} className="flex items-center justify-between px-3 py-1.5 rounded bg-neutral-800/40">
-                    <span className="text-xs text-neutral-500 w-20">{session.date}</span>
-                    <span className="text-xs text-neutral-400 w-28 truncate">{session.mode}</span>
-                    {session.duration > 0 && (
-                      <span className="text-xs text-neutral-600 w-10">{Math.round(session.duration / 1000)}s</span>
-                    )}
-                    <span className="text-sm font-bold text-neutral-200 w-16 text-right">{session.wpm} WPM</span>
-                    <span className={`text-sm font-bold w-12 text-right ${session.accuracy >= 95 ? "text-[#00ff88]" : session.accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>
-                      {session.accuracy}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          )}
-
-          {progress.tips && progress.tips.length > 0 && (
-            <Panel>
-              <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">AI Tips</h2>
-              <div className="space-y-2 max-h-72 overflow-y-auto">
-                {progress.tips.slice(0, 8).map((tip, i) => (
-                  <div key={i} className="flex items-start gap-2 px-3 py-2 rounded bg-neutral-800/40">
-                    <span className="text-amber-400 mt-0.5 text-sm">💡</span>
-                    <div>
-                      <p className="text-sm text-neutral-300">{tip.text}</p>
-                      <p className="text-[10px] text-neutral-600 mt-0.5">{tip.createdAt.split("T")[0]}</p>
+        {(sessions.length > 0 || (progress.tips && progress.tips.length > 0)) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {sessions.length > 0 && (
+              <Panel className={!(progress.tips && progress.tips.length > 0) ? "lg:col-span-2" : ""}>
+                <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">Recent Sessions</h2>
+                <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                  {sessions.slice(0, 15).map((session, i) => (
+                    <div key={session.id || i} className="flex items-center justify-between px-3 py-1.5 rounded bg-neutral-800/40">
+                      <span className="text-xs text-neutral-500 w-20">{session.date}</span>
+                      <span className="text-xs text-neutral-400 w-28 truncate">{session.mode}</span>
+                      {session.duration > 0 && (
+                        <span className="text-xs text-neutral-600 w-10">{Math.round(session.duration / 1000)}s</span>
+                      )}
+                      <span className="text-sm font-bold text-neutral-200 w-16 text-right">{session.wpm} WPM</span>
+                      <span className={`text-sm font-bold w-12 text-right ${session.accuracy >= 95 ? "text-[#00ff88]" : session.accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>
+                        {session.accuracy}%
+                      </span>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          )}
-        </div>
+                  ))}
+                </div>
+              </Panel>
+            )}
+
+            {progress.tips && progress.tips.length > 0 && (
+              <Panel className={sessions.length === 0 ? "lg:col-span-2" : ""}>
+                <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">AI Tips</h2>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {progress.tips.slice(0, 10).map((tip, i) => (
+                    <TipItem key={i} text={tip.text} explanation={tip.explanation} date={tip.createdAt.split("T")[0]} />
+                  ))}
+                </div>
+              </Panel>
+            )}
+          </div>
+        )}
 
         {/* Loading indicator */}
         {loadingHistory && (
@@ -154,29 +153,41 @@ export default function StatsPage() {
         )}
 
         {/* Row 3: Performance charts (WPM + Accuracy side by side) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel><WpmChart sessions={sessions} /></Panel>
-          <Panel><AccuracyChart sessions={sessions} /></Panel>
-        </div>
+        {sessions.length >= 2 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Panel><WpmChart sessions={sessions} /></Panel>
+            <Panel><AccuracyChart sessions={sessions} /></Panel>
+          </div>
+        )}
 
         {/* Row 4: Analytics summary */}
-        <Panel><AnalyticsSummary sessions={sessions} /></Panel>
+        {sessions.length >= 3 && (
+          <Panel><AnalyticsSummary sessions={sessions} /></Panel>
+        )}
 
         {/* Row 5: Activity (Practice heatmap + Sessions per week) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel><PracticeHeatmap sessions={sessions} /></Panel>
-          <Panel><SessionsPerWeek sessions={sessions} /></Panel>
-        </div>
+        {sessions.length >= 2 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {sessions.length > 0 && <Panel><PracticeHeatmap sessions={sessions} /></Panel>}
+            <Panel><SessionsPerWeek sessions={sessions} /></Panel>
+          </div>
+        )}
 
         {/* Row 6: Weaknesses (Error distribution + Slow bigrams) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel><ErrorDistribution errorHeatmap={progress.errorHeatmap} /></Panel>
-          <Panel><BigramChart sessions={sessions} /></Panel>
-        </div>
+        {(Object.keys(progress.errorHeatmap).length > 0 || hasBigramData) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {Object.keys(progress.errorHeatmap).length > 0 && (
+              <Panel className={!hasBigramData ? "lg:col-span-2" : ""}><ErrorDistribution errorHeatmap={progress.errorHeatmap} /></Panel>
+            )}
+            {hasBigramData && (
+              <Panel className={Object.keys(progress.errorHeatmap).length === 0 ? "lg:col-span-2" : ""}><BigramChart sessions={sessions} /></Panel>
+            )}
+          </div>
+        )}
 
         {/* Row 7: Deeper analysis (Mode breakdown + Keyboard heatmap) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel><ModeBreakdown sessions={sessions} /></Panel>
+          <Panel className={Object.keys(progress.errorHeatmap).length === 0 ? "lg:col-span-2" : ""}><ModeBreakdown sessions={sessions} /></Panel>
           {Object.keys(progress.errorHeatmap).length > 0 && (
             <Panel>
               <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center mb-3">Error Heatmap</h2>
@@ -215,6 +226,36 @@ function BigStat({
         <FontAwesomeIcon icon={icon} className="w-3 h-3" />
         {label}
       </div>
+    </div>
+  );
+}
+
+function TipItem({ text, explanation, date }: { text: string; explanation?: string; date: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasExplanation = !!explanation;
+
+  return (
+    <div
+      className={`rounded-lg transition-colors ${hasExplanation ? "cursor-pointer hover:bg-neutral-700/40" : ""} bg-neutral-800/40`}
+      onClick={() => hasExplanation && setExpanded(!expanded)}
+    >
+      <div className="flex items-start gap-2 px-3 py-2">
+        <span className="text-amber-400 mt-0.5 text-sm">💡</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-neutral-300">{text}</p>
+          <p className="text-[10px] text-neutral-600 mt-0.5">{date}</p>
+        </div>
+        {hasExplanation && (
+          <span className={`text-neutral-600 text-xs mt-1 transition-transform ${expanded ? "rotate-180" : ""}`}>
+            ▾
+          </span>
+        )}
+      </div>
+      {expanded && explanation && (
+        <div className="px-3 pb-3 pt-0 ml-7">
+          <p className="text-xs text-neutral-400 leading-relaxed">{explanation}</p>
+        </div>
+      )}
     </div>
   );
 }

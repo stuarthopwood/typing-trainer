@@ -14,8 +14,12 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const envLabel = process.env.VERCEL_ENV === "production" ? "" :
+  process.env.VERCEL_ENV === "preview" ? " [preview]" :
+  process.env.NODE_ENV === "development" ? " [dev]" : "";
+
 export const metadata: Metadata = {
-  title: "NeuralKeys",
+  title: `NeuralKeys${envLabel}`,
   description: "Build neural pathways through keystroke repetition — typing drills and passage practice",
 };
 

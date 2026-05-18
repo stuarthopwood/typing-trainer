@@ -29,6 +29,7 @@ export default function ErrorDistribution({ errorHeatmap }: ErrorDistributionPro
             contentStyle={{ backgroundColor: "#141414", border: "1px solid #333", borderRadius: "8px" }}
             labelStyle={{ color: "#999" }}
             itemStyle={{ color: "#ef4444" }}
+            cursor={false}
           />
           <Bar dataKey="errors" fill="#ef4444" radius={[0, 4, 4, 0]} name="Errors" />
         </BarChart>
