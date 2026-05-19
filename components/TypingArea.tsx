@@ -150,7 +150,7 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
       <div
         className={`p-8 sm:p-12 transition-all duration-300 ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out]" : ""}`}
       >
-        <p className="text-4xl sm:text-5xl md:text-6xl leading-[1.8] tracking-wide whitespace-pre-wrap select-none text-center font-[family-name:var(--font-inter)]">
+        <p className="text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap select-none text-center font-[family-name:var(--font-inter)]">
           {text.split("").map((char, i) => (
             <Char
               key={i}
