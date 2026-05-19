@@ -21,15 +21,16 @@ export async function POST(req: NextRequest) {
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = message.content[0]?.type === "text" ? message.content[0].text : "";
+    const rawText = message.content[0]?.type === "text" ? message.content[0].text : "";
+    const cleaned = rawText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
     try {
-      const parsed = JSON.parse(text.trim());
+      const parsed = JSON.parse(cleaned);
       if (parsed.tip && parsed.explanation) {
         return NextResponse.json({ tip: parsed.tip, explanation: parsed.explanation });
       }
-      return NextResponse.json({ tip: parsed.tip || text.trim() });
+      return NextResponse.json({ tip: parsed.tip || cleaned });
     } catch {
-      return NextResponse.json({ tip: text.trim() });
+      return NextResponse.json({ tip: cleaned });
     }
   } catch {
     return NextResponse.json({ error: "AI unavailable" }, { status: 503 });

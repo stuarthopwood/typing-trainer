@@ -267,12 +267,35 @@ export function updatePracticeTargets(
   const charSet = new Set<string>();
   const bigramSet = new Set<string>();
 
-  // Top 10 chars from cumulative error heatmap
+  // Determine weaker hand — if imbalance > 1.3x, prioritize that hand's keys
+  let weakerHand: "left" | "right" | null = null;
+  if (timingMetadata?.leftHand && timingMetadata?.rightHand) {
+    const l = timingMetadata.leftHand;
+    const r = timingMetadata.rightHand;
+    if (l.errorRate > r.errorRate * 1.3 && l.total > 5) weakerHand = "left";
+    else if (r.errorRate > l.errorRate * 1.3 && r.total > 5) weakerHand = "right";
+  }
+
+  // Top chars from cumulative error heatmap, prioritizing weaker hand
   const heatmapEntries = Object.entries(errorHeatmap)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10);
-  for (const [char] of heatmapEntries) {
-    if (char.length === 1) charSet.add(char);
+    .filter(([char]) => char.length === 1)
+    .sort(([, a], [, b]) => b - a);
+
+  if (weakerHand) {
+    // Take up to 8 chars from the weaker hand first, then fill remaining from any hand
+    const weakHandChars = heatmapEntries.filter(([char]) => getHand(char) === weakerHand);
+    for (const [char] of weakHandChars.slice(0, 8)) {
+      charSet.add(char);
+    }
+    // Fill remaining slots
+    for (const [char] of heatmapEntries) {
+      if (charSet.size >= 10) break;
+      charSet.add(char);
+    }
+  } else {
+    for (const [char] of heatmapEntries.slice(0, 10)) {
+      charSet.add(char);
+    }
   }
 
   // Chars from pattern detection (shallow activation, slipped finger, repeated-char)
@@ -281,6 +304,18 @@ export function updatePracticeTargets(
       for (const c of p.chars) {
         if (c.length === 1) charSet.add(c);
       }
+    }
+  }
+
+  // If a hand is weak, ensure some of its common keys are always targeted
+  // even if they aren't in the error heatmap yet
+  if (weakerHand) {
+    const weakHandKeys = weakerHand === "left"
+      ? ["a", "s", "d", "f", "g", "r", "e", "w", "t", "q"]
+      : ["h", "j", "k", "l", ";", "u", "i", "o", "p", "y"];
+    const weakErrors = weakHandKeys.filter((k) => (errorHeatmap[k] || 0) > 0);
+    for (const k of weakErrors.slice(0, 5)) {
+      charSet.add(k);
     }
   }
 
