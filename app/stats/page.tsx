@@ -8,7 +8,8 @@ import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartLine, faRi
 import { getProgress, clearUserPin, loadFullHistory, type ProgressData } from "@/lib/progress";
 import type { EnrichedSessionSummary } from "@/lib/types";
 import GlowBorder from "@/components/GlowBorder";
-import KeyboardHeatmap from "@/components/KeyboardHeatmap";
+import KeyboardHeatmap, { type HeatmapCase } from "@/components/KeyboardHeatmap";
+import Switch from "@/components/Switch";
 import WpmChart from "@/components/charts/WpmChart";
 import AccuracyChart from "@/components/charts/AccuracyChart";
 import SessionsPerWeek from "@/components/charts/SessionsPerWeek";
@@ -23,6 +24,7 @@ export default function StatsPage() {
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [allSessions, setAllSessions] = useState<EnrichedSessionSummary[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [heatmapCase, setHeatmapCase] = useState<HeatmapCase>("lower");
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -174,7 +176,24 @@ export default function StatsPage() {
           </div>
         )}
 
-        {/* Row 6: Weaknesses (Error distribution + Slow bigrams) */}
+        {/* Row 6: Keyboard heatmap (full width — primary error visualisation) */}
+        {Object.keys(progress.errorHeatmap).length > 0 && (
+          <Panel>
+            <div className="flex items-center justify-between mb-3 gap-3">
+              <h2 className="text-sm text-neutral-400 uppercase tracking-wider">Error Heatmap</h2>
+              <Switch
+                checked={heatmapCase === "upper"}
+                onChange={(c) => setHeatmapCase(c ? "upper" : "lower")}
+                labelLeft="abc"
+                labelRight="ABC"
+                ariaLabel="Toggle between lowercase and uppercase error heatmap"
+              />
+            </div>
+            <KeyboardHeatmap errorHeatmap={progress.errorHeatmap} caseMode={heatmapCase} />
+          </Panel>
+        )}
+
+        {/* Row 7: Weaknesses (Most missed keys + Slow bigrams) */}
         {(Object.keys(progress.errorHeatmap).length > 0 || hasBigramData) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {Object.keys(progress.errorHeatmap).length > 0 && (
@@ -186,16 +205,8 @@ export default function StatsPage() {
           </div>
         )}
 
-        {/* Row 7: Deeper analysis (Mode breakdown + Keyboard heatmap) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Panel className={Object.keys(progress.errorHeatmap).length === 0 ? "lg:col-span-2" : ""}><ModeBreakdown sessions={sessions} /></Panel>
-          {Object.keys(progress.errorHeatmap).length > 0 && (
-            <Panel>
-              <h2 className="text-sm text-neutral-400 uppercase tracking-wider text-center mb-3">Error Heatmap</h2>
-              <KeyboardHeatmap errorHeatmap={progress.errorHeatmap} />
-            </Panel>
-          )}
-        </div>
+        {/* Row 8: Mode breakdown */}
+        <Panel><ModeBreakdown sessions={sessions} /></Panel>
       </div>
     </main>
   );
