@@ -79,6 +79,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [bestWpm, setBestWpm] = useState(0);
   const [bestAccuracy, setBestAccuracy] = useState(0);
   const [practiceTargets, setPracticeTargets] = useState<PracticeTargets | undefined>(undefined);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -248,7 +249,18 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       updated.practiceTargets = updatePracticeTargets(updated.errorHeatmap, timingMetadata, patterns);
 
       localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
-      syncToRemote(updated, session);
+      syncToRemote(updated, session).then((result) => {
+        if (!result.ok) {
+          const reason =
+            result.reason === "not-configured"
+              ? "Sync skipped — no PIN/API key set."
+              : result.reason === "network"
+                ? "Sync failed — network error. Progress saved locally."
+                : `Sync failed (HTTP ${result.status ?? "?"}). Progress saved locally.`;
+          setSyncError(reason);
+          setTimeout(() => setSyncError(null), 6000);
+        }
+      });
 
       if (demotionTarget) {
         setDrillLevel(demotionTarget);
@@ -361,6 +373,15 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             <span>
               Dropped to <span className="font-medium capitalize">{demotionNotice.to.replace("-", " ")}</span> — let&apos;s rebuild accuracy on <span className="capitalize">{demotionNotice.from.replace("-", " ")}</span>.
             </span>
+          </div>
+        </div>
+      )}
+
+      {syncError && (
+        <div className="relative w-full px-6 sm:px-10 pt-3" role="status" aria-live="polite">
+          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/40 text-sm text-red-200">
+            <span aria-hidden="true">⚠</span>
+            <span>{syncError}</span>
           </div>
         </div>
       )}

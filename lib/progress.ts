@@ -222,21 +222,27 @@ export function clearUserPin(): void {
   localStorage.removeItem("neuralkeys-pin");
 }
 
-export async function syncToRemote(progress: ProgressData, newSession?: EnrichedSessionSummary): Promise<void> {
+export type SyncStatus =
+  | { ok: true }
+  | { ok: false; reason: "not-configured" | "network" | "http"; status?: number };
+
+export async function syncToRemote(progress: ProgressData, newSession?: EnrichedSessionSummary): Promise<SyncStatus> {
   const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
   const pin = getUserPin();
-  if (!apiKey || !pin) return;
+  if (!apiKey || !pin) return { ok: false, reason: "not-configured" };
   try {
     const payload = newSession
       ? { ...progress, newSession }
       : progress;
-    await fetch("/api/progress", {
+    const res = await fetch("/api/progress", {
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "x-user-pin": pin },
       body: JSON.stringify(payload),
     });
+    if (!res.ok) return { ok: false, reason: "http", status: res.status };
+    return { ok: true };
   } catch {
-    // Silent fail — local data is the source of truth, remote is backup
+    return { ok: false, reason: "network" };
   }
 }
 
