@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartLine, faRightFromBracket, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { getProgress, clearUserPin, loadFullHistory, type ProgressData } from "@/lib/progress";
 import type { EnrichedSessionSummary } from "@/lib/types";
+import GlowBorder from "@/components/GlowBorder";
 import KeyboardHeatmap from "@/components/KeyboardHeatmap";
 import WpmChart from "@/components/charts/WpmChart";
 import AccuracyChart from "@/components/charts/AccuracyChart";
@@ -57,7 +58,7 @@ export default function StatsPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="text-neutral-400 hover:text-[#00ff88] transition-colors"
+              className="text-neutral-300 hover:text-[#00ff88] transition-colors"
               aria-label="Back to typing"
             >
               <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
@@ -69,7 +70,7 @@ export default function StatsPage() {
           </div>
           <button
             onClick={handleLogout}
-            className="text-neutral-600 hover:text-red-400 transition-colors"
+            className="text-neutral-300 hover:text-red-400 transition-colors"
             aria-label="Logout"
             title="Logout"
           >
@@ -93,7 +94,7 @@ export default function StatsPage() {
           <Panel className="col-span-1">
             <div className="text-center">
               <div className="text-3xl sm:text-4xl font-bold text-orange-400">{progress.currentStreak}</div>
-              <div className="text-xs text-neutral-500 mt-1 flex items-center justify-center gap-1">
+              <div className="text-xs text-neutral-400 mt-1 flex items-center justify-center gap-1">
                 <FontAwesomeIcon icon={faFire} className="w-3 h-3" />
                 Day Streak
               </div>
@@ -102,7 +103,7 @@ export default function StatsPage() {
           <Panel className="col-span-1">
             <div className="text-center">
               <div className="text-3xl sm:text-4xl font-bold text-neutral-200">{avgWpm}</div>
-              <div className="text-xs text-neutral-500 mt-1">Avg WPM</div>
+              <div className="text-xs text-neutral-400 mt-1">Avg WPM</div>
             </div>
           </Panel>
         </div>
@@ -112,14 +113,14 @@ export default function StatsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {sessions.length > 0 && (
               <Panel className={!(progress.tips && progress.tips.length > 0) ? "lg:col-span-2" : ""}>
-                <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">Recent Sessions</h2>
+                <h2 className="text-sm text-neutral-400 uppercase tracking-wider mb-3">Recent Sessions</h2>
                 <div className="space-y-1.5 max-h-72 overflow-y-auto">
                   {sessions.slice(0, 15).map((session, i) => (
                     <div key={session.id || i} className="flex items-center justify-between px-3 py-1.5 rounded bg-neutral-800/40">
-                      <span className="text-xs text-neutral-500 w-20">{session.date}</span>
-                      <span className="text-xs text-neutral-400 w-28 truncate">{session.mode}</span>
+                      <span className="text-xs text-neutral-400 w-20">{session.date}</span>
+                      <span className="text-xs text-neutral-300 w-28 truncate">{session.mode}</span>
                       {session.duration > 0 && (
-                        <span className="text-xs text-neutral-600 w-10">{Math.round(session.duration / 1000)}s</span>
+                        <span className="text-xs text-neutral-400 w-10">{Math.round(session.duration / 1000)}s</span>
                       )}
                       <span className="text-sm font-bold text-neutral-200 w-16 text-right">{session.wpm} WPM</span>
                       <span className={`text-sm font-bold w-12 text-right ${session.accuracy >= 95 ? "text-[#00ff88]" : session.accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>
@@ -133,7 +134,7 @@ export default function StatsPage() {
 
             {progress.tips && progress.tips.length > 0 && (
               <Panel className={sessions.length === 0 ? "lg:col-span-2" : ""}>
-                <h2 className="text-sm text-neutral-500 uppercase tracking-wider mb-3">AI Tips</h2>
+                <h2 className="text-sm text-neutral-400 uppercase tracking-wider mb-3">AI Tips</h2>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {progress.tips.slice(0, 10).map((tip, i) => (
                     <TipItem key={i} text={tip.text} explanation={tip.explanation} date={tip.createdAt.split("T")[0]} />
@@ -146,7 +147,7 @@ export default function StatsPage() {
 
         {/* Loading indicator */}
         {loadingHistory && (
-          <div className="text-center text-neutral-500 text-sm">
+          <div className="text-center text-neutral-300 text-sm">
             <FontAwesomeIcon icon={faSpinner} className="w-4 h-4 animate-spin mr-2" />
             Loading full history...
           </div>
@@ -190,7 +191,7 @@ export default function StatsPage() {
           <Panel className={Object.keys(progress.errorHeatmap).length === 0 ? "lg:col-span-2" : ""}><ModeBreakdown sessions={sessions} /></Panel>
           {Object.keys(progress.errorHeatmap).length > 0 && (
             <Panel>
-              <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center mb-3">Error Heatmap</h2>
+              <h2 className="text-sm text-neutral-400 uppercase tracking-wider text-center mb-3">Error Heatmap</h2>
               <KeyboardHeatmap errorHeatmap={progress.errorHeatmap} />
             </Panel>
           )}
@@ -202,9 +203,11 @@ export default function StatsPage() {
 
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-neutral-900/40 border border-neutral-800/50 rounded-xl p-5 ${className}`}>
-      {children}
-    </div>
+    <GlowBorder radius="0.75rem" intensity="normal" className={className}>
+      <div className="bg-neutral-900/40 border border-neutral-800/50 rounded-xl p-5 h-full">
+        {children}
+      </div>
+    </GlowBorder>
   );
 }
 
@@ -222,7 +225,7 @@ function BigStat({
   return (
     <div className="text-center">
       <div className={`text-3xl sm:text-4xl font-bold ${color}`}>{value}</div>
-      <div className="text-xs text-neutral-500 mt-1 flex items-center justify-center gap-1">
+      <div className="text-xs text-neutral-400 mt-1 flex items-center justify-center gap-1">
         <FontAwesomeIcon icon={icon} className="w-3 h-3" />
         {label}
       </div>
@@ -243,7 +246,7 @@ function TipItem({ text, explanation, date }: { text: string; explanation?: stri
         <span className="text-amber-400 mt-0.5 text-sm">💡</span>
         <div className="flex-1 min-w-0">
           <p className="text-sm text-neutral-300">{text}</p>
-          <p className="text-[10px] text-neutral-600 mt-0.5">{date}</p>
+          <p className="text-[10px] text-neutral-400 mt-0.5">{date}</p>
         </div>
         {hasExplanation && (
           <span className={`text-neutral-600 text-xs mt-1 transition-transform ${expanded ? "rotate-180" : ""}`}>
