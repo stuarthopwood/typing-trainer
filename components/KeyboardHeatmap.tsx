@@ -7,35 +7,37 @@ interface KeyboardHeatmapProps {
   errorHeatmap: Record<string, number>;
 }
 
+// Unshifted characters only — shifted variants (e.g. T, !, @, <) represent
+// distinct keystrokes (Shift+key) and are visualised separately in the
+// "Most Missed Keys" chart, not aggregated onto the physical key here.
 const CHAR_TO_CODE: Record<string, string> = {
-  "`": "Backquote", "~": "Backquote",
-  "1": "Digit1", "!": "Digit1",
-  "2": "Digit2", "@": "Digit2",
-  "3": "Digit3", "#": "Digit3",
-  "4": "Digit4", "$": "Digit4",
-  "5": "Digit5", "%": "Digit5",
-  "6": "Digit6", "^": "Digit6",
-  "7": "Digit7", "&": "Digit7",
-  "8": "Digit8", "*": "Digit8",
-  "9": "Digit9", "(": "Digit9",
-  "0": "Digit0", ")": "Digit0",
-  "-": "Minus", "_": "Minus",
-  "=": "Equal", "+": "Equal",
-  "[": "BracketLeft", "{": "BracketLeft",
-  "]": "BracketRight", "}": "BracketRight",
-  "\\": "Backslash", "|": "Backslash",
-  ";": "Semicolon", ":": "Semicolon",
-  "'": "Quote", "\"": "Quote",
-  ",": "Comma", "<": "Comma",
-  ".": "Period", ">": "Period",
-  "/": "Slash", "?": "Slash",
+  "`": "Backquote",
+  "1": "Digit1",
+  "2": "Digit2",
+  "3": "Digit3",
+  "4": "Digit4",
+  "5": "Digit5",
+  "6": "Digit6",
+  "7": "Digit7",
+  "8": "Digit8",
+  "9": "Digit9",
+  "0": "Digit0",
+  "-": "Minus",
+  "=": "Equal",
+  "[": "BracketLeft",
+  "]": "BracketRight",
+  "\\": "Backslash",
+  ";": "Semicolon",
+  "'": "Quote",
+  ",": "Comma",
+  ".": "Period",
+  "/": "Slash",
   " ": "Space", "\n": "Enter",
 };
 
-for (let i = 65; i <= 90; i++) {
-  const letter = String.fromCharCode(i);
-  CHAR_TO_CODE[letter.toLowerCase()] = `Key${letter}`;
-  CHAR_TO_CODE[letter] = `Key${letter}`;
+for (let i = 97; i <= 122; i++) {
+  const lower = String.fromCharCode(i);
+  CHAR_TO_CODE[lower] = `Key${lower.toUpperCase()}`;
 }
 
 function buildCodeErrorMap(errorHeatmap: Record<string, number>): Record<string, number> {
@@ -43,7 +45,7 @@ function buildCodeErrorMap(errorHeatmap: Record<string, number>): Record<string,
   for (const [char, count] of Object.entries(errorHeatmap)) {
     const code = CHAR_TO_CODE[char];
     if (code) {
-      result[code] = (result[code] || 0) + count;
+      result[code] = count;
     }
   }
   return result;
