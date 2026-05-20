@@ -9,7 +9,7 @@ import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
 import VisualKeyboard from "@/components/VisualKeyboard";
 import { buildSessionStats, calculateWpm, calculateAccuracy } from "@/lib/engine";
-import { generateDrillText, DRILL_LEVELS } from "@/lib/drills";
+import { generateDrillText, DRILL_LEVELS, filterTargetsForLevel } from "@/lib/drills";
 import { playKeyClick, playKeyError } from "@/lib/sounds";
 import { checkAchievements, getLevelFromXp, type Achievement, type AchievementContext } from "@/lib/achievements";
 import { getRandomPassage } from "@/lib/passages";
@@ -348,7 +348,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           label={mode === "drill" ? drillLevel.replace("-", " ") : passageDifficulty}
         />
 
-        <AdaptiveTargetIndicator mode={mode} />
+        <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} />
 
         {(isActive || sessionStats) && (
           <StatsDisplay
@@ -446,10 +446,14 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
   );
 }
 
-function AdaptiveTargetIndicator({ mode }: { mode: TrainingMode }) {
+function AdaptiveTargetIndicator({ mode, drillLevel }: { mode: TrainingMode; drillLevel: DrillLevel }) {
   if (mode !== "drill") return null;
-  const targets = getProgress().practiceTargets;
-  if (!targets || (targets.chars.length === 0 && targets.bigrams.length === 0)) return null;
+  const rawTargets = getProgress().practiceTargets;
+  if (!rawTargets) return null;
+
+  const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
+  const targets = filterTargetsForLevel(rawTargets, config.chars);
+  if (targets.chars.length === 0 && targets.bigrams.length === 0) return null;
 
   const allTargets = [
     ...targets.chars.slice(0, 5).map((c) => c === " " ? "space" : c),
