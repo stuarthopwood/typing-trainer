@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartLine, faRightFromBracket, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { getProgress, clearUserPin, loadFullHistory, type ProgressData } from "@/lib/progress";
 import type { EnrichedSessionSummary } from "@/lib/types";
+import GlowBorder from "@/components/GlowBorder";
 import KeyboardHeatmap from "@/components/KeyboardHeatmap";
 import WpmChart from "@/components/charts/WpmChart";
 import AccuracyChart from "@/components/charts/AccuracyChart";
@@ -202,9 +203,11 @@ export default function StatsPage() {
 
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-neutral-900/40 border border-neutral-800/50 rounded-xl p-5 ${className}`}>
-      {children}
-    </div>
+    <GlowBorder radius="0.75rem" intensity="normal" className={className}>
+      <div className="bg-neutral-900/40 border border-neutral-800/50 rounded-xl p-5 h-full">
+        {children}
+      </div>
+    </GlowBorder>
   );
 }
 

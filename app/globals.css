@@ -22,6 +22,64 @@
   100% { transform: translate3d(-4%, -2%, 0) scale(1); }
 }
 
+@property --glow-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes glow-rotate {
+  to { --glow-angle: 360deg; }
+}
+
+.glow-border {
+  position: relative;
+  border-radius: var(--glow-radius, 0.75rem);
+  isolation: isolate;
+}
+
+.glow-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--glow-angle, 0deg),
+    #00ff88,
+    #22d3ee,
+    #6366f1,
+    #00ff88
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: var(--glow-opacity, 0);
+  transition: opacity 250ms ease;
+  pointer-events: none;
+  animation: glow-rotate 8s linear infinite;
+}
+
+.glow-border::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-spot, 240px) circle at var(--mx, 50%) var(--my, 50%),
+    rgba(0, 255, 136, var(--glow-alpha, 0.8)),
+    rgba(34, 211, 238, calc(var(--glow-alpha, 0.8) * 0.4)) 40%,
+    transparent 70%
+  );
+  opacity: var(--glow-opacity, 0);
+  transition: opacity 250ms ease;
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(10px);
+}
+
 :root {
   font-size: 120%;
   --accent: #00ff88;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
+import GlowBorder from "@/components/GlowBorder";
 import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
 import VisualKeyboard from "@/components/VisualKeyboard";
@@ -377,12 +378,14 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
         <div className="relative">
           <TipBox tip={currentTip} loading={tipLoading} />
-          <TypingArea
-            text={currentText}
-            onComplete={handleComplete}
-            onProgress={handleProgress}
-            onKeyPress={handleKeyPress}
-          />
+          <GlowBorder radius="1rem" intensity="punchy">
+            <TypingArea
+              text={currentText}
+              onComplete={handleComplete}
+              onProgress={handleProgress}
+              onKeyPress={handleKeyPress}
+            />
+          </GlowBorder>
         </div>
 
         {sessionStats && newAchievements.length > 0 && (

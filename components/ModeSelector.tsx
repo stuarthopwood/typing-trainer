@@ -3,6 +3,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faKeyboard, faBook, faLock } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
+import GlowBorder from "./GlowBorder";
 
 interface ModeSelectorProps {
   mode: TrainingMode;
@@ -53,30 +54,34 @@ export default function ModeSelector({
     <div className="flex flex-wrap items-center gap-4">
       {/* Mode Toggle */}
       <div className="flex gap-1">
-        <button
-          onClick={() => onModeChange("drill")}
-          className={`p-2.5 rounded-lg transition-all ${
-            mode === "drill"
-              ? "text-[#00ff88] bg-[#00ff88]/10"
-              : "text-neutral-500 hover:text-neutral-300"
-          }`}
-          aria-pressed={mode === "drill"}
-          aria-label="Key Drill mode"
-        >
-          <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => onModeChange("passage")}
-          className={`p-2.5 rounded-lg transition-all ${
-            mode === "passage"
-              ? "text-[#00ff88] bg-[#00ff88]/10"
-              : "text-neutral-500 hover:text-neutral-300"
-          }`}
-          aria-pressed={mode === "passage"}
-          aria-label="Passage mode"
-        >
-          <FontAwesomeIcon icon={faBook} className="w-5 h-5" />
-        </button>
+        <GlowBorder radius="0.5rem" intensity="subtle">
+          <button
+            onClick={() => onModeChange("drill")}
+            className={`p-2.5 rounded-lg transition-all ${
+              mode === "drill"
+                ? "text-[#00ff88] bg-[#00ff88]/10"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+            aria-pressed={mode === "drill"}
+            aria-label="Key Drill mode"
+          >
+            <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5" />
+          </button>
+        </GlowBorder>
+        <GlowBorder radius="0.5rem" intensity="subtle">
+          <button
+            onClick={() => onModeChange("passage")}
+            className={`p-2.5 rounded-lg transition-all ${
+              mode === "passage"
+                ? "text-[#00ff88] bg-[#00ff88]/10"
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+            aria-pressed={mode === "passage"}
+            aria-label="Passage mode"
+          >
+            <FontAwesomeIcon icon={faBook} className="w-5 h-5" />
+          </button>
+        </GlowBorder>
       </div>
 
       {/* Difficulty — signal bar style, cycles on click */}
@@ -119,24 +124,25 @@ export default function ModeSelector({
             const unlocked = unlockedDrillLevels.has(level);
             const progress = drillProgress[level] ?? 0;
             return (
-              <button
-                key={level}
-                onClick={() => unlocked && onDrillLevelChange(level)}
-                disabled={!unlocked}
-                aria-disabled={!unlocked}
-                className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 ${
-                  !unlocked
-                    ? "text-neutral-700 cursor-not-allowed"
-                    : drillLevel === level
-                      ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
-                      : "text-neutral-500 hover:text-neutral-300"
-                }`}
-                title={!unlocked ? `Locked — ${progress}/${unlockThreshold} qualifying sessions (85%+ accuracy)` : level.replace("-", " ")}
-              >
-                {!unlocked && <FontAwesomeIcon icon={faLock} className="w-2.5 h-2.5" />}
-                {level.replace("-", " ")}
-                {!unlocked && <span className="text-xs text-neutral-600">{progress}/{unlockThreshold}</span>}
-              </button>
+              <GlowBorder key={level} radius="0.375rem" intensity="subtle">
+                <button
+                  onClick={() => unlocked && onDrillLevelChange(level)}
+                  disabled={!unlocked}
+                  aria-disabled={!unlocked}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 ${
+                    !unlocked
+                      ? "text-neutral-700 cursor-not-allowed"
+                      : drillLevel === level
+                        ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
+                        : "text-neutral-500 hover:text-neutral-300"
+                  }`}
+                  title={!unlocked ? `Locked — ${progress}/${unlockThreshold} qualifying sessions (85%+ accuracy)` : level.replace("-", " ")}
+                >
+                  {!unlocked && <FontAwesomeIcon icon={faLock} className="w-2.5 h-2.5" />}
+                  {level.replace("-", " ")}
+                  {!unlocked && <span className="text-xs text-neutral-600">{progress}/{unlockThreshold}</span>}
+                </button>
+              </GlowBorder>
             );
           })}
         </div>
@@ -145,17 +151,18 @@ export default function ModeSelector({
       {mode === "passage" && (
         <div className="flex flex-wrap gap-1">
           {(["all", "book", "movie", "code", "quote"] as (Passage["category"] | "all")[]).map((c) => (
-            <button
-              key={c}
-              onClick={() => onCategoryChange(c)}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all ${
-                passageCategory === c
-                  ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
-                  : "text-neutral-500 hover:text-neutral-300"
-              }`}
-            >
-              {c}
-            </button>
+            <GlowBorder key={c} radius="0.375rem" intensity="subtle">
+              <button
+                onClick={() => onCategoryChange(c)}
+                className={`px-3 py-1.5 text-sm rounded-md transition-all ${
+                  passageCategory === c
+                    ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
+                    : "text-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                {c}
+              </button>
+            </GlowBorder>
           ))}
         </div>
       )}
