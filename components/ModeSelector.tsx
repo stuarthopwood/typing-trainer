@@ -60,7 +60,7 @@ export default function ModeSelector({
             className={`p-2.5 rounded-lg transition-all ${
               mode === "drill"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
-                : "text-neutral-500 hover:text-neutral-300"
+                : "text-neutral-300 hover:text-white"
             }`}
             aria-pressed={mode === "drill"}
             aria-label="Key Drill mode"
@@ -74,7 +74,7 @@ export default function ModeSelector({
             className={`p-2.5 rounded-lg transition-all ${
               mode === "passage"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
-                : "text-neutral-500 hover:text-neutral-300"
+                : "text-neutral-300 hover:text-white"
             }`}
             aria-pressed={mode === "passage"}
             aria-label="Passage mode"
@@ -84,38 +84,46 @@ export default function ModeSelector({
         </GlowBorder>
       </div>
 
-      {/* Difficulty — signal bar style, cycles on click */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={cycleDifficulty}
-          className="flex items-end gap-0.5 p-2 rounded-lg hover:bg-neutral-800 transition-all"
-          title={`Difficulty: ${passageDifficulty} (click to cycle unlocked levels)`}
-        >
-          <span
-            className={`w-2 rounded-sm transition-colors ${
-              difficultyIndex >= 0 ? "bg-green-500" : "bg-neutral-700"
-            }`}
-            style={{ height: "10px" }}
-          />
-          <span
-            className={`w-2 rounded-sm transition-colors ${
-              difficultyIndex >= 1 && unlockedDifficulties.has("intermediate") ? "bg-amber-500" : "bg-neutral-700"
-            }`}
-            style={{ height: "16px" }}
-          />
-          <span
-            className={`w-2 rounded-sm transition-colors ${
-              difficultyIndex >= 2 && unlockedDifficulties.has("advanced") ? "bg-red-500" : "bg-neutral-700"
-            }`}
-            style={{ height: "22px" }}
-          />
-        </button>
-        {mode === "passage" && !unlockedDifficulties.has(DIFFICULTIES[difficultyIndex + 1]) && difficultyIndex < 2 && (
-          <span className="text-xs text-neutral-600">
-            {difficultyProgress[passageDifficulty] ?? 0}/{unlockThreshold}
-          </span>
-        )}
-      </div>
+      {/* Difficulty — only meaningful in passage mode */}
+      {mode === "passage" && (() => {
+        const unlockedCount = DIFFICULTIES.filter((d) => unlockedDifficulties.has(d)).length;
+        const canCycle = unlockedCount > 1;
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cycleDifficulty}
+              disabled={!canCycle}
+              className={`flex items-end gap-0.5 p-2 rounded-lg transition-all ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
+              title={canCycle ? `Difficulty: ${passageDifficulty} (click to cycle unlocked levels)` : `Difficulty: ${passageDifficulty} (unlock more by completing sessions at 85%+ accuracy)`}
+            >
+              <span
+                className={`w-2 rounded-sm transition-colors ${
+                  difficultyIndex >= 0 ? "bg-green-500" : "bg-neutral-600"
+                }`}
+                style={{ height: "10px" }}
+              />
+              <span
+                className={`w-2 rounded-sm transition-colors ${
+                  difficultyIndex >= 1 && unlockedDifficulties.has("intermediate") ? "bg-amber-500" : "bg-neutral-600"
+                }`}
+                style={{ height: "16px" }}
+              />
+              <span
+                className={`w-2 rounded-sm transition-colors ${
+                  difficultyIndex >= 2 && unlockedDifficulties.has("advanced") ? "bg-red-500" : "bg-neutral-600"
+                }`}
+                style={{ height: "22px" }}
+              />
+            </button>
+            <span className="text-xs text-neutral-300 capitalize font-medium">{passageDifficulty}</span>
+            {!unlockedDifficulties.has(DIFFICULTIES[difficultyIndex + 1]) && difficultyIndex < 2 && (
+              <span className="text-xs text-neutral-400">
+                {difficultyProgress[passageDifficulty] ?? 0}/{unlockThreshold}
+              </span>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Drill level or category selector */}
       {mode === "drill" && (
@@ -124,23 +132,23 @@ export default function ModeSelector({
             const unlocked = unlockedDrillLevels.has(level);
             const progress = drillProgress[level] ?? 0;
             return (
-              <GlowBorder key={level} radius="0.375rem" intensity="subtle">
+              <GlowBorder key={level} radius="0.375rem" intensity="subtle" disabled={!unlocked}>
                 <button
                   onClick={() => unlocked && onDrillLevelChange(level)}
                   disabled={!unlocked}
                   aria-disabled={!unlocked}
                   className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 ${
                     !unlocked
-                      ? "text-neutral-700 cursor-not-allowed"
+                      ? "text-neutral-400 cursor-not-allowed"
                       : drillLevel === level
                         ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
-                        : "text-neutral-500 hover:text-neutral-300"
+                        : "text-neutral-300 hover:text-white"
                   }`}
                   title={!unlocked ? `Locked — ${progress}/${unlockThreshold} qualifying sessions (85%+ accuracy)` : level.replace("-", " ")}
                 >
                   {!unlocked && <FontAwesomeIcon icon={faLock} className="w-2.5 h-2.5" />}
                   {level.replace("-", " ")}
-                  {!unlocked && <span className="text-xs text-neutral-600">{progress}/{unlockThreshold}</span>}
+                  {!unlocked && <span className="text-xs text-neutral-400">{progress}/{unlockThreshold}</span>}
                 </button>
               </GlowBorder>
             );
@@ -157,7 +165,7 @@ export default function ModeSelector({
                 className={`px-3 py-1.5 text-sm rounded-md transition-all ${
                   passageCategory === c
                     ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
-                    : "text-neutral-500 hover:text-neutral-300"
+                    : "text-neutral-300 hover:text-white"
                 }`}
               >
                 {c}

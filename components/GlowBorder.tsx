@@ -7,6 +7,7 @@ interface GlowBorderProps {
   className?: string;
   radius?: string;
   intensity?: "subtle" | "normal" | "punchy";
+  disabled?: boolean;
 }
 
 export default function GlowBorder({
@@ -14,10 +15,12 @@ export default function GlowBorder({
   className = "",
   radius = "0.75rem",
   intensity = "normal",
+  disabled = false,
 }: GlowBorderProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   const handleMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled) return;
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -35,7 +38,7 @@ export default function GlowBorder({
   const style: CSSProperties = {
     "--glow-radius": radius,
     "--glow-spot": intensity === "subtle" ? "180px" : intensity === "punchy" ? "320px" : "240px",
-    "--glow-alpha": intensity === "subtle" ? "0.5" : intensity === "punchy" ? "1" : "0.8",
+    "--glow-alpha": intensity === "subtle" ? "0.4" : intensity === "punchy" ? "0.7" : "0.55",
   } as CSSProperties;
 
   return (
@@ -45,6 +48,7 @@ export default function GlowBorder({
       onPointerLeave={handleLeave}
       className={`glow-border ${className}`}
       style={style}
+      data-disabled={disabled || undefined}
     >
       {children}
     </div>

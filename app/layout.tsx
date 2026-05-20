@@ -30,9 +30,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`}>
-      <body className="min-h-full font-[family-name:var(--font-inter)] bg-slate-50 dark:bg-[#0d0d0d] text-slate-900 dark:text-neutral-200">
+      <body className="min-h-full font-[family-name:var(--font-inter)] bg-slate-50 dark:bg-transparent text-slate-900 dark:text-neutral-200">
         {children}
-        <span className="fixed bottom-2 right-3 text-[10px] text-neutral-700 pointer-events-none select-none">
+        <span className="fixed bottom-2 right-3 z-50 text-xs text-neutral-400 pointer-events-none select-none">
           v{process.env.NEXT_PUBLIC_APP_VERSION}
         </span>
         <Analytics />

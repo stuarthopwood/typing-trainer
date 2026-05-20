@@ -308,18 +308,18 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSoundEnabled((s) => { soundEnabledRef.current = !s; return !s; })}
-              className={`transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-600 hover:text-neutral-400"}`}
+              className={`transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-300 hover:text-white"}`}
               aria-label={soundEnabled ? "Disable sound" : "Enable sound"}
               aria-pressed={soundEnabled}
             >
               <FontAwesomeIcon icon={soundEnabled ? faVolumeHigh : faVolumeXmark} className="w-4 h-4" />
             </button>
-            <Link href="/stats" className="text-neutral-400 hover:text-[#00ff88] transition-colors" title="Stats">
+            <Link href="/stats" className="text-neutral-300 hover:text-[#00ff88] transition-colors" title="Stats">
               <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
             </Link>
             <button
               onClick={onLogout}
-              className="text-neutral-600 hover:text-red-400 transition-colors"
+              className="text-neutral-300 hover:text-red-400 transition-colors"
               aria-label="Logout"
               title="Logout"
             >
@@ -427,7 +427,7 @@ const XpBar = memo(function XpBar({ xp }: { xp: number }) {
       <div className="w-20 h-1.5 bg-neutral-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={currentXp} aria-valuemax={nextLevelXp} aria-label={`Level ${level} progress: ${pct}%`}>
         <div className="h-full bg-[#00ff88]/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-neutral-600">{xp} XP</span>
+      <span className="text-xs text-neutral-400">{xp} XP</span>
     </div>
   );
 });
@@ -438,7 +438,7 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-neutral-500 capitalize">{label}</span>
+      <span className="text-xs text-neutral-300 capitalize">{label}</span>
       <div className="flex gap-1">
         {Array.from({ length: threshold }, (_, i) => (
           <div
@@ -446,12 +446,12 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
             className={`w-2 h-2 rounded-full transition-colors ${
               i < capped
                 ? isMaxed ? "bg-[#00ff88]" : "bg-[#00ff88]/60"
-                : "bg-neutral-700"
+                : "bg-neutral-600"
             }`}
           />
         ))}
       </div>
-      <span className="text-xs text-neutral-600">
+      <span className="text-xs text-neutral-400">
         {isMaxed ? "complete" : `${capped}/${threshold}`}
       </span>
     </div>
@@ -473,8 +473,8 @@ const AdaptiveTargetIndicator = memo(function AdaptiveTargetIndicator({ mode, dr
   return (
     <div className="flex items-center gap-2" title={`Adaptive targeting: ${allTargets.join(", ")}`}>
       <span className="text-xs text-amber-400">🎯</span>
-      <span className="text-xs text-neutral-500">
-        Targeting: <span className="text-amber-400/80">{allTargets.join(", ")}</span>
+      <span className="text-xs text-neutral-300">
+        Targeting: <span className="text-amber-300">{allTargets.join(", ")}</span>
       </span>
     </div>
   );
