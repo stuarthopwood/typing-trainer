@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, memo } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
@@ -18,7 +18,7 @@ import PinEntry from "@/components/PinEntry";
 import TipBox from "@/components/TipBox";
 import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
 import { computeSessionTimingMetadata, updatePracticeTargets } from "@/lib/analytics";
-import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState } from "@/lib/types";
+import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState, PracticeTargets } from "@/lib/types";
 
 export default function Home() {
   const [hasPin, setHasPin] = useState<boolean | null>(null);
@@ -71,6 +71,10 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [unlockedDifficulties, setUnlockedDifficulties] = useState<Set<string>>(new Set(["beginner"]));
   const [drillProgress, setDrillProgress] = useState<Record<string, number>>({});
   const [difficultyProgress, setDifficultyProgress] = useState<Record<string, number>>({});
+  const [xp, setXp] = useState(0);
+  const [bestWpm, setBestWpm] = useState(0);
+  const [bestAccuracy, setBestAccuracy] = useState(0);
+  const [practiceTargets, setPracticeTargets] = useState<PracticeTargets | undefined>(undefined);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -84,6 +88,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     const dfp: Record<string, number> = {};
     for (const d of diffs) dfp[d] = getLevelQualifyingSessions(`passage:${d}`);
     setDifficultyProgress(dfp);
+    const p = getProgress();
+    setXp(p.xp || 0);
+    setBestWpm(p.bestWpm);
+    setBestAccuracy(p.bestAccuracy);
+    setPracticeTargets(p.practiceTargets);
   }, [unlockVersion]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -94,14 +103,13 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
-      const targets = getProgress().practiceTargets;
-      setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels, targets), source: "" });
+      setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels, practiceTargets), source: "" });
     } else {
       const cat = passageCategory === "all" ? undefined : passageCategory;
       const passage = getRandomPassage(passageDifficulty, cat);
       setCurrentPassage({ text: passage.text, source: passage.source });
     }
-  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels]);
+  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchTip = useCallback(async (keyStrokes: KeyStroke[], text: string) => {
@@ -293,7 +301,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5 text-[#00ff88]" />
             NeuralKeys
           </h1>
-          <XpBar />
+          <XpBar xp={xp} />
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSoundEnabled((s) => !s)}
@@ -348,7 +356,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           label={mode === "drill" ? drillLevel.replace("-", " ") : passageDifficulty}
         />
 
-        <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} />
+        <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} targets={practiceTargets} />
 
         {(isActive || sessionStats) && (
           <StatsDisplay
@@ -360,8 +368,8 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             combo={combo}
             sessionAvgWpm={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.wpm, 0) / sessionResults.length) : undefined}
             sessionAvgAccuracy={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.accuracy, 0) / sessionResults.length) : undefined}
-            allTimeBestWpm={sessionStats ? getProgress().bestWpm : undefined}
-            allTimeBestAccuracy={sessionStats ? getProgress().bestAccuracy : undefined}
+            allTimeBestWpm={sessionStats ? bestWpm : undefined}
+            allTimeBestAccuracy={sessionStats ? bestAccuracy : undefined}
           />
         )}
 
@@ -404,9 +412,8 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-function XpBar() {
-  const progress = getProgress();
-  const { level, currentXp, nextLevelXp } = getLevelFromXp(progress.xp || 0);
+const XpBar = memo(function XpBar({ xp }: { xp: number }) {
+  const { level, currentXp, nextLevelXp } = getLevelFromXp(xp);
   const pct = Math.min(100, Math.round((currentXp / nextLevelXp) * 100));
 
   return (
@@ -415,10 +422,10 @@ function XpBar() {
       <div className="w-20 h-1.5 bg-neutral-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={currentXp} aria-valuemax={nextLevelXp} aria-label={`Level ${level} progress: ${pct}%`}>
         <div className="h-full bg-[#00ff88]/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-neutral-600">{progress.xp || 0} XP</span>
+      <span className="text-xs text-neutral-600">{xp} XP</span>
     </div>
   );
-}
+});
 
 function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; qualifying: number; threshold: number; label: string }) {
   const capped = Math.min(qualifying, threshold);
@@ -446,10 +453,8 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
   );
 }
 
-function AdaptiveTargetIndicator({ mode, drillLevel }: { mode: TrainingMode; drillLevel: DrillLevel }) {
-  if (mode !== "drill") return null;
-  const rawTargets = getProgress().practiceTargets;
-  if (!rawTargets) return null;
+const AdaptiveTargetIndicator = memo(function AdaptiveTargetIndicator({ mode, drillLevel, targets: rawTargets }: { mode: TrainingMode; drillLevel: DrillLevel; targets: PracticeTargets | undefined }) {
+  if (mode !== "drill" || !rawTargets) return null;
 
   const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
   const targets = filterTargetsForLevel(rawTargets, config.chars);
@@ -468,4 +473,4 @@ function AdaptiveTargetIndicator({ mode, drillLevel }: { mode: TrainingMode; dri
       </span>
     </div>
   );
-}
+});
