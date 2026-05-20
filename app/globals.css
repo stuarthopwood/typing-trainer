@@ -23,3 +23,9 @@
   --bg-surface: #141414;
   --bg-elevated: #1a1a1a;
 }
+
+@media (max-width: 1920px) {
+  :root {
+    font-size: 96%;
+  }
+}
