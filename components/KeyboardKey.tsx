@@ -34,9 +34,9 @@ export default memo(function KeyboardKey({ keyDef, isActive, isCorrect, isExpect
   } else if (isExpected) {
     stateClasses = "bg-[#00ff88]/8 border-[#00ff88]/30 text-neutral-400 animate-[pulse_2s_ease-in-out_infinite]";
   } else if (isUtility) {
-    stateClasses = "bg-[#141414] border-neutral-600/50 text-neutral-500 shadow-[inset_0_-1px_0_#0d0d0d]";
+    stateClasses = "bg-[#141414] border-neutral-600/50 text-neutral-300 shadow-[inset_0_-1px_0_#0d0d0d]";
   } else {
-    stateClasses = "bg-[#1a1a1a] border-neutral-700/50 text-neutral-400 shadow-[inset_0_-1px_0_#111]";
+    stateClasses = "bg-[#1a1a1a] border-neutral-700/50 text-neutral-200 shadow-[inset_0_-1px_0_#111]";
   }
 
   return (

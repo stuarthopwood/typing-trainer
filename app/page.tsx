@@ -468,7 +468,7 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-neutral-300 capitalize">{label}</span>
+      <span className="text-xs text-neutral-200 capitalize">{label}</span>
       <div className="flex gap-1">
         {Array.from({ length: threshold }, (_, i) => (
           <div
@@ -481,7 +481,7 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
           />
         ))}
       </div>
-      <span className="text-xs text-neutral-400">
+      <span className="text-xs text-neutral-300">
         {isMaxed ? "complete" : `${capped}/${threshold}`}
       </span>
     </div>
