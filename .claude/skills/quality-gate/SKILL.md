@@ -9,23 +9,25 @@ Run the full quality gate for NeuralKeys. This is an iterative process — cycle
 
 ### Step 1: Automated Checks
 Run these sequentially — all must pass before proceeding:
-1. `npm test` — all tests pass
-2. `npx tsc --noEmit` — zero type errors
-3. `npm run lint` — zero lint errors
+1. `npm run lint` — zero lint errors
+2. `npm test -- --coverage` — all tests pass; coverage ≥80% on touched `lib/**` and `components/**` files (Constitution Principle II)
+3. `npx tsc --noEmit` — zero type errors
 4. `npm run build` — clean production build
 
 If any fail, fix immediately and re-run before proceeding.
 
 ### Step 2: Sub-Agent Reviews
-Spawn ALL of the following review agents IN PARALLEL using the Agent tool:
-- `/test-engineer` — review entire project for test gaps and quality
-- `/code-reviewer` — review for SOLID, DRY, YAGNI, KISS adherence
-- `/accessibility-auditor` — review for WCAG and a11y issues
-- `/security-auditor` — review for vulnerabilities and exposure
-- `/performance-auditor` — review for re-renders, bundle size, INP
-- `/ux-reviewer` — review for consistency and usability
+Spawn ALL FOUR mandatory review sub-agents IN PARALLEL using the Agent tool (single message, four tool calls):
+- `subagent_type: test-engineer` — test gaps, BDD adherence, complexity, coverage
+- `subagent_type: code-reviewer` — overall code quality, SOLID/DRY/YAGNI/KISS, refactoring
+- `subagent_type: accessibility-auditor` — WCAG, keyboard nav, focus, contrast, screen reader
+- `subagent_type: security-auditor` — secrets, XSS, injection, deps, Blob token exposure
 
-Each agent reports findings with severity: Critical / High / Medium / Low.
+Optionally also spawn (advisory):
+- `subagent_type: performance-auditor` — re-renders, bundle size, INP
+- `subagent_type: ux-reviewer` — consistency and usability
+
+Each agent reports findings with severity: Critical / High / Medium / Low and a final `VERDICT: PASS | FAIL` line.
 
 ### Step 3: Triage & Fix
 1. Collect all findings from all agents

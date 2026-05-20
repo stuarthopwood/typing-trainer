@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "second-brain": {
+      "command": "node",
+      "args": ["C:/repos/personal/second-brain-mcp/dist/index.js"],
+      "env": {
+        "SECOND_BRAIN_VAULT_PATH": "C:\\Second-Brain"
+      }
+    }
+  }
+}
