@@ -295,8 +295,9 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   }, [sessionStats, handleNext]);
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-[#0d0d0d] transition-colors">
-      <header className="dark:bg-[#141414] border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm">
+    <main className="min-h-screen bg-slate-50 dark:bg-transparent transition-colors relative">
+      <div className="ambient-bg" aria-hidden="true" />
+      <header className="dark:bg-[#141414]/80 border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm relative">
         <div className="w-full px-6 sm:px-10 py-3 flex items-center justify-between">
           <h1 className="text-lg font-bold text-slate-800 dark:text-neutral-300 flex items-center gap-2">
             <FontAwesomeIcon icon={faKeyboard} className="w-5 h-5 text-[#00ff88]" />
@@ -328,12 +329,12 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       </header>
 
       {position === 0 && !isActive && (
-        <div className="w-full px-6 sm:px-10 pt-3 flex justify-end">
+        <div className="relative w-full px-6 sm:px-10 pt-3 flex justify-end">
           <p className="text-sm text-slate-400 dark:text-slate-500">Start typing to begin...</p>
         </div>
       )}
 
-      <div className="w-full px-6 sm:px-10 py-8 space-y-10">
+      <div className="relative w-full px-6 sm:px-10 py-8 space-y-10">
         <ModeSelector
           mode={mode}
           drillLevel={drillLevel}

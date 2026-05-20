@@ -15,6 +15,13 @@
   50% { opacity: 0.6; }
 }
 
+@keyframes ambient-drift {
+  0%   { transform: translate3d(-4%, -2%, 0) scale(1); }
+  33%  { transform: translate3d(3%, 1%, 0) scale(1.05); }
+  66%  { transform: translate3d(-2%, 3%, 0) scale(0.97); }
+  100% { transform: translate3d(-4%, -2%, 0) scale(1); }
+}
+
 :root {
   font-size: 120%;
   --accent: #00ff88;
@@ -22,6 +29,44 @@
   --bg-dark: #0d0d0d;
   --bg-surface: #141414;
   --bg-elevated: #1a1a1a;
+}
+
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #0d0d0d;
+}
+
+.ambient-bg::before,
+.ambient-bg::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  will-change: transform;
+}
+
+.ambient-bg::before {
+  background:
+    radial-gradient(50% 40% at 25% 30%, rgba(0, 255, 136, 0.10), transparent 70%),
+    radial-gradient(45% 35% at 80% 70%, rgba(34, 211, 238, 0.07), transparent 70%);
+  animation: ambient-drift 28s ease-in-out infinite;
+}
+
+.ambient-bg::after {
+  background:
+    radial-gradient(40% 30% at 70% 20%, rgba(99, 102, 241, 0.06), transparent 70%),
+    radial-gradient(40% 30% at 20% 85%, rgba(0, 255, 136, 0.05), transparent 70%);
+  animation: ambient-drift 42s ease-in-out infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-bg::before,
+  .ambient-bg::after {
+    animation: none;
+  }
 }
 
 @media (max-width: 1920px) {

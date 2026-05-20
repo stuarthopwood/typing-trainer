@@ -170,7 +170,7 @@ const Char = memo(function Char({ char, state }: { char: string; state: "pending
         ? "text-[#00ff88]/80"
         : state === "active"
           ? "text-white bg-[#00ff88]/15 rounded-sm border-b-2 border-[#00ff88] shadow-[0_0_8px_rgba(0,255,136,0.3)] animate-[pulse_2s_ease-in-out_infinite]"
-          : "text-neutral-500";
+          : "text-neutral-300";
 
   const display = char === "\n" ? "↵\n" : state === "active" && char === " " ? "·" : char;
 
