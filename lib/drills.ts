@@ -101,10 +101,20 @@ import { DRILL_ORDER } from "./progress";
 
 const LEVEL_ORDER = DRILL_ORDER;
 
+export function filterTargetsForLevel(targets: PracticeTargets, levelChars: string): PracticeTargets {
+  const allowed = new Set(levelChars.toLowerCase());
+  return {
+    chars: targets.chars.filter((c) => allowed.has(c.toLowerCase())),
+    bigrams: targets.bigrams.filter((b) => [...b.toLowerCase()].every((c) => allowed.has(c) || c === " ")),
+    updatedAt: targets.updatedAt,
+  };
+}
+
 export function generateDrillText(config: DrillConfig, length: number = 50, unlockedLevels?: Set<string>, targets?: PracticeTargets): string {
   const primaryWords = WORD_BANK[config.level] || WORD_BANK["full"];
   const mixWords = getMixWords(config.level, unlockedLevels);
-  const targetedWords = targets ? getTargetedWords(primaryWords, targets) : [];
+  const reachableTargets = targets ? filterTargetsForLevel(targets, config.chars) : undefined;
+  const targetedWords = reachableTargets ? getTargetedWords(primaryWords, reachableTargets) : [];
 
   const selected: string[] = [];
   let currentLength = 0;

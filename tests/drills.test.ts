@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DRILL_LEVELS, generateDrillText } from "@/lib/drills";
+import { DRILL_LEVELS, generateDrillText, filterTargetsForLevel } from "@/lib/drills";
 import type { PracticeTargets } from "@/lib/types";
 
 describe("Drills — Level Configuration", () => {
@@ -96,6 +96,29 @@ describe("Drills — Adaptive Targeting", () => {
     const config = DRILL_LEVELS[0];
     const targets: PracticeTargets = { chars: [], bigrams: [], updatedAt: "" };
     const text = generateDrillText(config, 40, undefined, targets);
+    expect(text.length).toBeGreaterThan(0);
+  });
+
+  it("should drop targets that aren't reachable in the current drill level", () => {
+    const homeRow = DRILL_LEVELS.find((l) => l.level === "home-row")!;
+    const targets: PracticeTargets = {
+      chars: ["l", "h", "p", "y", "u"], // p, y, u are top-row, not home-row
+      bigrams: ["sh", "py", "ou"],
+      updatedAt: new Date().toISOString(),
+    };
+    const filtered = filterTargetsForLevel(targets, homeRow.chars);
+    expect(filtered.chars).toEqual(["l", "h"]);
+    expect(filtered.bigrams).toEqual(["sh"]);
+  });
+
+  it("should not crash when no targets are reachable in the level", () => {
+    const homeRow = DRILL_LEVELS[0];
+    const targets: PracticeTargets = {
+      chars: ["p", "y", "u", "i", "o"], // none in home-row
+      bigrams: ["py", "ou"],
+      updatedAt: new Date().toISOString(),
+    };
+    const text = generateDrillText(homeRow, 100, undefined, targets);
     expect(text.length).toBeGreaterThan(0);
   });
 
