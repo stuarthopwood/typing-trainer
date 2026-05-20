@@ -15,6 +15,7 @@ export interface ProgressData {
   achievements: { id: string; unlockedAt: string }[];
   tips: { text: string; explanation?: string; createdAt: string }[];
   practiceTargets?: PracticeTargets;
+  drillLowAccuracyStreak?: Record<string, number>;
 }
 
 export interface SessionEnrichment {
@@ -39,6 +40,7 @@ export function getProgress(): ProgressData {
     if (!data.xp) data.xp = 0;
     if (!data.achievements) data.achievements = [];
     if (!data.tips) data.tips = [];
+    if (!data.drillLowAccuracyStreak) data.drillLowAccuracyStreak = {};
     return data;
   } catch {
     return defaultProgress();
@@ -122,6 +124,7 @@ function defaultProgress(): ProgressData {
     xp: 0,
     achievements: [],
     tips: [],
+    drillLowAccuracyStreak: {},
   };
 }
 
@@ -166,6 +169,45 @@ export function getLevelQualifyingSessions(mode: string): number {
 }
 
 export const UNLOCK_SESSIONS_REQUIRED = UNLOCK_THRESHOLD;
+
+export const DRILL_DEMOTE_ACCURACY_THRESHOLD = 70;
+export const DRILL_DEMOTE_STREAK = 2;
+
+export interface DemotionResult {
+  demoted: boolean;
+  fromLevel?: string;
+  toLevel?: string;
+}
+
+export function processDrillDemotion(progress: ProgressData, accuracy: number, level: string): DemotionResult {
+  if (!progress.drillLowAccuracyStreak) progress.drillLowAccuracyStreak = {};
+  const idx = DRILL_ORDER.indexOf(level);
+  if (idx <= 0) {
+    progress.drillLowAccuracyStreak[level] = 0;
+    return { demoted: false };
+  }
+  if (accuracy >= DRILL_DEMOTE_ACCURACY_THRESHOLD) {
+    progress.drillLowAccuracyStreak[level] = 0;
+    return { demoted: false };
+  }
+  const streak = (progress.drillLowAccuracyStreak[level] || 0) + 1;
+  progress.drillLowAccuracyStreak[level] = streak;
+  if (streak < DRILL_DEMOTE_STREAK) {
+    return { demoted: false };
+  }
+  const prevLevel = DRILL_ORDER[idx - 1];
+  progress.levelProgress[`drill:${prevLevel}`] = 0;
+  progress.drillLowAccuracyStreak[level] = 0;
+  return { demoted: true, fromLevel: level, toLevel: prevLevel };
+}
+
+export function getHighestUnlockedDrillLevel(): string {
+  const unlocked = getUnlockedDrillLevels();
+  for (let i = DRILL_ORDER.length - 1; i >= 0; i--) {
+    if (unlocked.has(DRILL_ORDER[i])) return DRILL_ORDER[i];
+  }
+  return "home-row";
+}
 
 export function getUserPin(): string | null {
   if (typeof window === "undefined") return null;
@@ -252,6 +294,7 @@ export function mergeProgress(local: ProgressData, remote: ProgressData): Progre
     xp: Math.max(local.xp || 0, remote.xp || 0),
     achievements: mergeAchievements(local.achievements || [], remote.achievements || []),
     tips: mergeTips(local.tips || [], remote.tips || []),
+    drillLowAccuracyStreak: { ...(remote.drillLowAccuracyStreak || {}), ...(local.drillLowAccuracyStreak || {}) },
   };
 }
 

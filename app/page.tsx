@@ -14,7 +14,7 @@ import { generateDrillText, DRILL_LEVELS, filterTargetsForLevel } from "@/lib/dr
 import { playKeyClick, playKeyError } from "@/lib/sounds";
 import { checkAchievements, getLevelFromXp, type Achievement, type AchievementContext } from "@/lib/achievements";
 import { getRandomPassage } from "@/lib/passages";
-import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress, getUserPin, setUserPin, clearUserPin } from "@/lib/progress";
+import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress, getUserPin, setUserPin, clearUserPin, processDrillDemotion, getHighestUnlockedDrillLevel } from "@/lib/progress";
 import PinEntry from "@/components/PinEntry";
 import TipBox from "@/components/TipBox";
 import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
@@ -47,6 +47,8 @@ export default function Home() {
 function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [mode, setMode] = useState<TrainingMode>("drill");
   const [drillLevel, setDrillLevel] = useState<DrillLevel>("home-row");
+  const [demotionNotice, setDemotionNotice] = useState<{ from: string; to: string } | null>(null);
+  const initialDrillLevelSetRef = useRef(false);
   const [passageDifficulty, setPassageDifficulty] = useState<Passage["difficulty"]>("beginner");
   const [passageCategory, setPassageCategory] = useState<Passage["category"] | "all">("all");
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
@@ -95,6 +97,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     setBestWpm(p.bestWpm);
     setBestAccuracy(p.bestAccuracy);
     setPracticeTargets(p.practiceTargets);
+    if (!initialDrillLevelSetRef.current) {
+      initialDrillLevelSetRef.current = true;
+      const highest = getHighestUnlockedDrillLevel() as DrillLevel;
+      if (highest !== "home-row") setDrillLevel(highest);
+    }
   }, [unlockVersion]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -198,6 +205,16 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
         timingMetadata,
       };
       const { progress: updated, session } = recordSession(stats, modeLabel, enrichment);
+
+      let demotionTarget: DrillLevel | null = null;
+      if (mode === "drill") {
+        const result = processDrillDemotion(updated, stats.accuracy, drillLevel);
+        if (result.demoted && result.toLevel) {
+          demotionTarget = result.toLevel as DrillLevel;
+          setDemotionNotice({ from: result.fromLevel ?? drillLevel, to: result.toLevel });
+          setTimeout(() => setDemotionNotice(null), 5000);
+        }
+      }
       setUnlockVersion((v) => v + 1);
 
       // Award base XP + check achievements in one pass
@@ -233,8 +250,10 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
       syncToRemote(updated, session);
 
-      // Auto-progression: advance drill level if next level just unlocked
-      if (mode === "drill") {
+      if (demotionTarget) {
+        setDrillLevel(demotionTarget);
+      } else if (mode === "drill") {
+        // Auto-progression: advance drill level if next level just unlocked
         const newUnlocked = getUnlockedDrillLevels();
         const levels: DrillLevel[] = ["home-row", "top-row", "bottom-row", "numbers", "symbols", "full"];
         const currentIdx = levels.indexOf(drillLevel);
@@ -332,6 +351,17 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       {position === 0 && !isActive && (
         <div className="relative w-full px-6 sm:px-10 pt-3 flex justify-end">
           <p className="text-sm text-slate-400 dark:text-slate-500">Start typing to begin...</p>
+        </div>
+      )}
+
+      {demotionNotice && (
+        <div className="relative w-full px-6 sm:px-10 pt-3" role="status" aria-live="polite">
+          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/40 text-sm text-amber-200">
+            <span aria-hidden="true">↓</span>
+            <span>
+              Dropped to <span className="font-medium capitalize">{demotionNotice.to.replace("-", " ")}</span> — let&apos;s rebuild accuracy on <span className="capitalize">{demotionNotice.from.replace("-", " ")}</span>.
+            </span>
+          </div>
         </div>
       )}
 

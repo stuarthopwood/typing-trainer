@@ -4,8 +4,12 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-05-20
+
 ### Added
 - This `CHANGELOG.md`. Going forward every PR updates it and merges to `master` are tagged `vX.Y.Z`.
+- Drill mode opens on the highest unlocked level instead of always starting at `home-row`.
+- Adaptive drill demotion: two consecutive sub-70% sessions on a drill level re-lock it and drop the user to the previous level, with an inline amber toast explaining why.
 
 ## [1.1.1] — 2026-05-20
 
@@ -91,7 +95,8 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 - Semver version display in the bottom-right corner.
 - Stats dashboard, adaptive drills, hand analytics, AI tips via Claude Haiku, PIN profiles, XP/achievements, error heatmap keyboard, visual keyboard, progressive level unlocking, cloud persistence (Vercel Blob), passages library, drill mode, celebrations, and the core typing engine.
 
-[Unreleased]: https://github.com/stuarthopwood/typing-trainer/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/stuarthopwood/typing-trainer/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/stuarthopwood/typing-trainer/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/stuarthopwood/typing-trainer/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/stuarthopwood/typing-trainer/compare/v1.0.9...v1.1.0
 [1.0.9]: https://github.com/stuarthopwood/typing-trainer/compare/v1.0.8...v1.0.9
