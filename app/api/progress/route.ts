@@ -119,6 +119,7 @@ export async function PUT(req: NextRequest) {
   await put(blobPath, JSON.stringify(dataToStore), {
     access: "public",
     addRandomSuffix: false,
+    allowOverwrite: true,
     token,
   });
 
