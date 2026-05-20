@@ -18,8 +18,46 @@ Web typing trainer — Stuart Hopwood. Repo: stuarthopwood/typing-trainer. Deplo
 - Each PR gets a `vX.Y.Z` title suffix and matching GitHub label.
 - Every PR updates `CHANGELOG.md` under the matching version heading (Keep a Changelog format).
 - After merge to `master`, tag the merge commit `vX.Y.Z` and push the tag.
-- Quality gate (lint + test + build) runs locally **before** push, never after.
+- Quality gate (see below) runs locally **before** push, never after.
 - Never `--no-verify`, never `--no-gpg-sign`, never force-push `master`.
+
+## Quality gate (pre-push, MANDATORY)
+
+Run BEFORE every push. Two phases — automated checks first, then a parallel sub-agent review fan-out. Do NOT push until both phases are clean.
+
+### Phase 1 — Automated checks (sequential, all must pass)
+
+1. `npm run lint`
+2. `npm test -- --coverage`  (all tests pass; coverage on touched files in `lib/**` and `components/**` ≥ 80% per Constitution Principle II)
+3. `npx tsc --noEmit`
+4. `npm run build`
+
+If any fail, fix the underlying issue and rerun. Do NOT proceed to Phase 2 with red automated checks.
+
+### Phase 2 — Sub-agent review (parallel)
+
+Spawn ALL FOUR review sub-agents in a single message (parallel) via the Agent tool, and wait for all of them to return:
+
+- `subagent_type: test-engineer` — test gaps, BDD adherence, readability, complexity, coverage.
+- `subagent_type: code-reviewer` — overall code quality, refactoring opportunities, SOLID/KISS/YAGNI/DRY.
+- `subagent_type: accessibility-auditor` — WCAG, keyboard navigation, focus, contrast, screen reader.
+- `subagent_type: security-auditor` — secrets, XSS, injection, dependency CVEs, Blob token exposure.
+
+Each agent returns findings with severity (Critical / High / Medium / Low) and a one-line `VERDICT: PASS | FAIL` line.
+
+### Triage rule
+
+- Any **Critical** or **High** finding from any agent → MUST fix before push.
+- **Medium** findings → fix in this PR if cheap; otherwise file as a follow-up issue and reference the issue in the PR description.
+- **Low** findings → advisory; ignore unless trivially fixable.
+
+After fixes, re-run Phase 1 + Phase 2 from the top. Maximum 3 cycles; if issues persist, escalate to Stuart with the remaining findings.
+
+### Push gate
+
+Push is allowed only when:
+- All Phase 1 checks are green AND
+- All four agents return `VERDICT: PASS` (or the only failures are Low-severity advisories explicitly accepted).
 
 ## Spec Kit workflow
 
