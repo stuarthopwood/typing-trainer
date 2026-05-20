@@ -1,5 +1,6 @@
 import type { KeyStroke, BigramTiming } from "./types";
 import type { SessionTimingMetadata } from "./types";
+import { getHand } from "./analytics";
 
 export interface ErrorPattern {
   type:
@@ -236,12 +237,31 @@ export function buildTipPrompt(patterns: ErrorPattern[], currentText: string, ti
     if (timingMetadata.leftHand && timingMetadata.rightHand) {
       const l = timingMetadata.leftHand;
       const r = timingMetadata.rightHand;
-      parts.push(`Left hand: ${l.errorRate}% error rate, ${l.avgDelay}ms avg delay (${l.total} keys)`);
-      parts.push(`Right hand: ${r.errorRate}% error rate, ${r.avgDelay}ms avg delay (${r.total} keys)`);
+      parts.push(`LEFT HAND keys (q w e r t a s d f g z x c v b, 1-5): ${l.errorRate}% error rate, ${l.avgDelay}ms avg delay (${l.total} keys)`);
+      parts.push(`RIGHT HAND keys (y u i o p h j k l ; n m , . /, 6-0): ${r.errorRate}% error rate, ${r.avgDelay}ms avg delay (${r.total} keys)`);
+
+      const errorChars = new Set<string>();
+      for (const p of patterns) {
+        for (const c of p.chars) {
+          if (c.length === 1) errorChars.add(c);
+        }
+      }
+      const leftErrors: string[] = [];
+      const rightErrors: string[] = [];
+      for (const c of errorChars) {
+        const hand = getHand(c);
+        if (hand === "left") leftErrors.push(c);
+        else if (hand === "right") rightErrors.push(c);
+      }
+      if (leftErrors.length > 0) parts.push(`Left-hand error keys: ${leftErrors.join(", ")}`);
+      if (rightErrors.length > 0) parts.push(`Right-hand error keys: ${rightErrors.join(", ")}`);
+
       if (l.errorRate > r.errorRate * 1.5 && l.total > 5) {
-        parts.push(`⚠️ Left hand significantly weaker (${l.errorRate}% vs ${r.errorRate}% errors)`);
+        parts.push(`VERDICT: LEFT hand is the weaker hand (${l.errorRate}% errors vs right hand's ${r.errorRate}%). Your tip MUST refer to "left hand".`);
       } else if (r.errorRate > l.errorRate * 1.5 && r.total > 5) {
-        parts.push(`⚠️ Right hand significantly weaker (${r.errorRate}% vs ${l.errorRate}% errors)`);
+        parts.push(`VERDICT: RIGHT hand is the weaker hand (${r.errorRate}% errors vs left hand's ${l.errorRate}%). Your tip MUST refer to "right hand".`);
+      } else {
+        parts.push(`VERDICT: Hands are roughly balanced — do not call out a weaker hand in the tip.`);
       }
     }
     if (parts.length > 0) timingContext = `\n\nTiming analysis:\n${parts.join("\n")}`;
@@ -253,6 +273,12 @@ Text being typed: "${currentText.slice(0, 80)}..."
 
 Error patterns detected:
 ${patternDescriptions}${timingContext}
+
+CRITICAL RULES — these prevent you from giving misleading advice:
+- The "VERDICT" line above is authoritative. If it says LEFT, your tip MUST say "left hand". If it says RIGHT, your tip MUST say "right hand". Never invert this.
+- LEFT-hand keys are: q w e r t, a s d f g, z x c v b, 1-5 (and their shifted variants).
+- RIGHT-hand keys are: y u i o p, h j k l ;, n m , . /, 6-0 (and their shifted variants).
+- Do NOT label a key as belonging to a hand it doesn't belong to. If you mention specific keys, group them with the correct hand.
 
 Reply with ONLY valid JSON in this exact format (no markdown, no backticks):
 {"tip":"<short actionable tip, max 20 words>","explanation":"<2-3 sentences explaining WHY this helps and HOW to practice it>"}`;
