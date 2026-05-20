@@ -12,7 +12,7 @@ interface TypingAreaProps {
   onKeyPress?: (key: string, code: string, correct: boolean | null) => void;
 }
 
-export default function TypingArea({ text, onComplete, onProgress, onKeyPress }: TypingAreaProps) {
+export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPress }: TypingAreaProps) {
   const [position, setPosition] = useState(0);
   const [errors, setErrors] = useState<Set<number>>(new Set());
   const [celebration, setCelebration] = useState<CelebrationTier>("none");
@@ -122,7 +122,6 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
     return () => window.removeEventListener("keyup", handleKeyUp);
   }, []);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setPosition(0);
     setErrors(new Set());
@@ -130,7 +129,6 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
     pendingKeysRef.current.clear();
     setCelebration("none");
   }, [text]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <div ref={containerRef} className="relative" tabIndex={0} role="application" aria-label="Typing area — type the displayed text">
@@ -162,7 +160,7 @@ export default function TypingArea({ text, onComplete, onProgress, onKeyPress }:
       </div>
     </div>
   );
-}
+});
 
 const Char = memo(function Char({ char, state }: { char: string; state: "pending" | "active" | "correct" | "error" }) {
   const className =

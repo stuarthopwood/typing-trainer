@@ -60,6 +60,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [unlockVersion, setUnlockVersion] = useState(0);
   const [sessionResults, setSessionResults] = useState<{ wpm: number; accuracy: number }[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const soundEnabledRef = useRef(false);
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
   const [currentTip, setCurrentTip] = useState<string | null>(null);
   const [tipLoading, setTipLoading] = useState(false);
@@ -261,11 +262,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     clearTimeout(activeKeyTimeoutRef.current);
     setActiveKey({ key, code, correct, timestamp: performance.now() });
     activeKeyTimeoutRef.current = setTimeout(() => setActiveKey(null), 150);
-    if (soundEnabled && correct !== null) {
+    if (soundEnabledRef.current && correct !== null) {
       if (correct) playKeyClick();
       else playKeyError();
     }
-  }, [soundEnabled]);
+  }, []);
 
   useEffect(() => {
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -304,7 +305,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           <XpBar xp={xp} />
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setSoundEnabled((s) => !s)}
+              onClick={() => setSoundEnabled((s) => { soundEnabledRef.current = !s; return !s; })}
               className={`transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-600 hover:text-neutral-400"}`}
               aria-label={soundEnabled ? "Disable sound" : "Enable sound"}
               aria-pressed={soundEnabled}
