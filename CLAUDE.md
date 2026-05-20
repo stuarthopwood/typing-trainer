@@ -24,3 +24,8 @@ Web typing trainer — Stuart Hopwood. Repo: stuarthopwood/typing-trainer. Deplo
 - Issues: `docs/agents/issue-tracker.md`
 - Triage: `docs/agents/triage-labels.md`
 - Domain: `docs/agents/domain.md`
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
