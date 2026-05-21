@@ -4,6 +4,35 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-05-21
+
+### Added
+- Per-session Blob storage: each completed session is now stored as an individual blob at `neuralkeys/sessions/{pin}/{session-id}.json`. Enables granular access, deletion, and future sharing/deep-linking.
+- New `/api/sessions` endpoint: list all sessions (paginated), fetch by ID, delete by ID, migrate legacy `allSessions`.
+- Stats page now aggregates from individual session blobs via the new sessions API.
+- Automatic migration: on first stats-page load, legacy `allSessions` entries are backfilled as individual blobs and cleared from the progress summary.
+
+### Changed
+- `PUT /api/progress` no longer appends to an `allSessions` array. The progress blob is now a lightweight summary (<10KB regardless of session count).
+- Stats page uses `loadAllSessions()` from `lib/sessions.ts` instead of `loadFullHistory()` from `lib/progress.ts`.
+
+### Removed
+- `loadFullHistory()` function from `lib/progress.ts` (replaced by session blob listing).
+- `?full=true` query parameter from `GET /api/progress` (no longer returns `allSessions`).
+
+## [1.2.3] — 2026-05-21
+
+### Fixed
+- WCAG 2.1 AA compliance: PinEntry focus ring, prefers-reduced-motion global suppression, chart contrast (neutral-500 → neutral-400), chart heading hierarchy (h2 → h3), scrollable-list keyboard focus, TypingArea escape hint, tap targets ≥44px, TipBox/StatsDisplay live regions, TipItem keyboard operability, PracticeHeatmap aria-label.
+- Drill-level buttons now highlight the active level during typing and after unlock/demotion.
+- Keystroke hot-path performance: event listener re-registration eliminated (positionRef + activeKeyRef), StatsDisplay memoized, fetchTip deferred off keystroke frame, shakeError timeout stacking fixed.
+
+## [1.2.2] — 2026-05-20
+
+### Fixed
+- Vercel Blob sync was silently failing for ~5 days because `put()` was missing `allowOverwrite: true`. Every sync after the first write threw 500.
+- `syncToRemote` now returns a `SyncStatus` discriminated union and surfaces failures via a red toast.
+
 ## [1.2.0] — 2026-05-20
 
 ### Added

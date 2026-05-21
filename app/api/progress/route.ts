@@ -29,15 +29,6 @@ function validateProgressData(data: unknown): data is Record<string, unknown> {
   return true;
 }
 
-async function loadExistingBlob(blobPath: string, token: string): Promise<Record<string, unknown> | null> {
-  try {
-    const metadata = await head(blobPath, { token });
-    const response = await fetch(metadata.url);
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
@@ -58,14 +49,6 @@ export async function GET(req: NextRequest) {
     const metadata = await head(blobPath, { token });
     const response = await fetch(metadata.url);
     const data = await response.json();
-
-    const full = req.nextUrl.searchParams.get("full");
-    if (full !== "true" && data.allSessions) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { allSessions: _, ...withoutHistory } = data;
-      return NextResponse.json(withoutHistory);
-    }
-
     return NextResponse.json(data);
   } catch {
     return NextResponse.json(null, { status: 404 });
@@ -97,26 +80,25 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Invalid data" }, { status: 422 });
   }
 
-  const { newSession, ...progressData } = body as Record<string, unknown> & { newSession?: unknown };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { newSession, allSessions: _strip, ...progressData } = body as Record<string, unknown> & { newSession?: unknown; allSessions?: unknown };
 
-  // If a new session was provided, append it to allSessions in the Blob
-  let allSessions: unknown[] = [];
+  // Write the new session as an individual blob
   if (newSession && typeof newSession === "object") {
-    const existing = await loadExistingBlob(blobPath, token);
-    if (existing?.allSessions && Array.isArray(existing.allSessions)) {
-      allSessions = existing.allSessions;
-    }
-    allSessions.push(newSession);
-  } else {
-    const existing = await loadExistingBlob(blobPath, token);
-    if (existing?.allSessions && Array.isArray(existing.allSessions)) {
-      allSessions = existing.allSessions;
+    const session = newSession as { id?: string };
+    if (session.id) {
+      const pin = req.headers.get("x-user-pin")!;
+      const sessionPath = `neuralkeys/sessions/${pin}/${session.id}.json`;
+      await put(sessionPath, JSON.stringify(newSession), {
+        access: "public",
+        addRandomSuffix: false,
+        token,
+      });
     }
   }
 
-  const dataToStore = { ...progressData, allSessions };
-
-  await put(blobPath, JSON.stringify(dataToStore), {
+  // Write progress summary WITHOUT allSessions
+  await put(blobPath, JSON.stringify(progressData), {
     access: "public",
     addRandomSuffix: false,
     allowOverwrite: true,

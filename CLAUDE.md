@@ -82,4 +82,5 @@ Spec-kit feature directories live under `specs/NNN-feature-name/`. The `dev` bra
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
+at `specs/009-per-session-blob-storage/plan.md`
 <!-- SPECKIT END -->

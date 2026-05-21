@@ -266,24 +266,6 @@ export async function loadFromRemote(): Promise<ProgressData | null> {
   }
 }
 
-export async function loadFullHistory(): Promise<EnrichedSessionSummary[]> {
-  const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
-  const pin = getUserPin();
-  if (!apiKey || !pin) return getProgress().recentSessions;
-  try {
-    const res = await fetch(`/api/progress?full=true`, {
-      headers: { "x-api-key": apiKey, "x-user-pin": pin },
-    });
-    if (!res.ok) return getProgress().recentSessions;
-    const data = await res.json();
-    if (data?.allSessions && Array.isArray(data.allSessions)) {
-      return data.allSessions;
-    }
-    return data?.recentSessions || getProgress().recentSessions;
-  } catch {
-    return getProgress().recentSessions;
-  }
-}
 
 export function mergeProgress(local: ProgressData, remote: ProgressData): ProgressData {
   return {
