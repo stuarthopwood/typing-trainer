@@ -53,7 +53,7 @@ export async function loadAllSessions(): Promise<EnrichedSessionSummary[]> {
 export async function deleteSession(sessionId: string): Promise<boolean> {
   const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
   const pin = typeof window !== "undefined" ? localStorage.getItem("neuralkeys-pin") : null;
-  if (!apiKey || !pin) return false;
+  if (!apiKey || !pin) return true;
 
   try {
     const res = await fetch(`/api/sessions?id=${encodeURIComponent(sessionId)}`, {

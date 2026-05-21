@@ -133,15 +133,15 @@ describe("Sessions — deleteSession", () => {
     expect(result).toBe(false);
   });
 
-  it("should return false when no PIN set", async () => {
-    // Given no PIN in localStorage
+  it("should return true when no PIN set (local-only delete succeeds)", async () => {
+    // Given no PIN in localStorage (API not configured)
     localStorageMock.removeItem("neuralkeys-pin");
 
     // When deleteSession is called
     const result = await deleteSession("550e8400-e29b-41d4-a716-446655440000");
 
-    // Then it returns false without making a network call
-    expect(result).toBe(false);
+    // Then it returns true (local deletion proceeds, remote skipped)
+    expect(result).toBe(true);
   });
 });
 
