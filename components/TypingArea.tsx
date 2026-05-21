@@ -131,7 +131,7 @@ export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPre
   }, [text]);
 
   return (
-    <div ref={containerRef} className="relative" tabIndex={0} role="application" aria-label="Typing area — type the displayed text">
+    <div ref={containerRef} className="relative" tabIndex={0} role="application" aria-label="Typing area — type the displayed text. Press Escape to exit.">
       {capsLockOn && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-red-900/80 rounded-2xl backdrop-blur-sm" role="alert" aria-live="assertive">
           <div className="text-center p-8">

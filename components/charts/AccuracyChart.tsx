@@ -22,13 +22,13 @@ export default function AccuracyChart({ sessions }: AccuracyChartProps) {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Accuracy Over Time</h2>
+      <h3 className="text-sm text-neutral-400 uppercase tracking-wider text-center">Accuracy Over Time</h3>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <ReferenceArea y1={95} y2={100} fill="#00ff88" fillOpacity={0.05} />
           <ReferenceArea y1={80} y2={95} fill="#f59e0b" fillOpacity={0.03} />
-          <XAxis dataKey="date" tick={{ fill: "#737373", fontSize: 10 }} tickLine={false} axisLine={false} />
-          <YAxis domain={[60, 100]} tick={{ fill: "#737373", fontSize: 10 }} tickLine={false} axisLine={false} />
+          <XAxis dataKey="date" tick={{ fill: "#a3a3a3", fontSize: 10 }} tickLine={false} axisLine={false} />
+          <YAxis domain={[60, 100]} tick={{ fill: "#a3a3a3", fontSize: 10 }} tickLine={false} axisLine={false} />
           <Tooltip
             contentStyle={{ backgroundColor: "#141414", border: "1px solid #333", borderRadius: "8px" }}
             labelStyle={{ color: "#999" }}

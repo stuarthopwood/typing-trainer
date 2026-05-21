@@ -339,18 +339,18 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSoundEnabled((s) => { soundEnabledRef.current = !s; return !s; })}
-              className={`transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-300 hover:text-white"}`}
+              className={`p-3 transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-300 hover:text-white"}`}
               aria-label={soundEnabled ? "Disable sound" : "Enable sound"}
               aria-pressed={soundEnabled}
             >
               <FontAwesomeIcon icon={soundEnabled ? faVolumeHigh : faVolumeXmark} className="w-4 h-4" />
             </button>
-            <Link href="/stats" className="text-neutral-300 hover:text-[#00ff88] transition-colors" title="Stats">
+            <Link href="/stats" className="p-3 text-neutral-300 hover:text-[#00ff88] transition-colors" title="Stats">
               <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
             </Link>
             <button
               onClick={onLogout}
-              className="text-neutral-300 hover:text-red-400 transition-colors"
+              className="p-3 text-neutral-300 hover:text-red-400 transition-colors"
               aria-label="Logout"
               title="Logout"
             >
@@ -441,7 +441,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
         {sessionStats && newAchievements.length > 0 && (
           <div className="text-center">
-            <div className="space-y-2" role="status" aria-live="polite">
+            <div className="space-y-2" role="status" aria-live="polite" aria-atomic="true">
               {newAchievements.map((a) => (
                 <div key={a.id} className="inline-flex items-center gap-2 px-4 py-2 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-sm animate-[pulse_2s_ease-in-out_infinite]">
                   <span className="text-lg">{a.icon}</span>

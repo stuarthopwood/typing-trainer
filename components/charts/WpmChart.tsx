@@ -23,11 +23,11 @@ export default function WpmChart({ sessions }: WpmChartProps) {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">WPM Over Time</h2>
+      <h3 className="text-sm text-neutral-400 uppercase tracking-wider text-center">WPM Over Time</h3>
       <ResponsiveContainer width="100%" height={250}>
         <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <XAxis dataKey="date" tick={{ fill: "#737373", fontSize: 10 }} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fill: "#737373", fontSize: 10 }} tickLine={false} axisLine={false} />
+          <XAxis dataKey="date" tick={{ fill: "#a3a3a3", fontSize: 10 }} tickLine={false} axisLine={false} />
+          <YAxis tick={{ fill: "#a3a3a3", fontSize: 10 }} tickLine={false} axisLine={false} />
           <Tooltip
             contentStyle={{ backgroundColor: "#141414", border: "1px solid #333", borderRadius: "8px" }}
             labelStyle={{ color: "#999" }}

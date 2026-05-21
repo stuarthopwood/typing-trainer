@@ -48,8 +48,8 @@ export default function PracticeHeatmap({ sessions }: PracticeHeatmapProps) {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Practice Activity</h2>
-      <div className="overflow-x-auto">
+      <h3 className="text-sm text-neutral-400 uppercase tracking-wider text-center">Practice Activity</h3>
+      <div className="overflow-x-auto" role="img" aria-label={`Practice activity heatmap for the past year. ${sessions.length} total sessions across ${Object.keys(countByDate).length} active days.`}>
         <div className="flex gap-[2px] justify-center min-w-fit">
           {weeks.map((week, wi) => (
             <div key={wi} className="flex flex-col gap-[2px]">

@@ -22,7 +22,7 @@ export function createConfetti(
   tier: CelebrationTier,
   onComplete?: () => void
 ): () => void {
-  if (tier === "none") {
+  if (tier === "none" || (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
     onComplete?.();
     return () => {};
   }

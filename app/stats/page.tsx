@@ -60,7 +60,7 @@ export default function StatsPage() {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="text-neutral-300 hover:text-[#00ff88] transition-colors"
+              className="p-3 text-neutral-300 hover:text-[#00ff88] transition-colors"
               aria-label="Back to typing"
             >
               <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
@@ -72,7 +72,7 @@ export default function StatsPage() {
           </div>
           <button
             onClick={handleLogout}
-            className="text-neutral-300 hover:text-red-400 transition-colors"
+            className="p-3 text-neutral-300 hover:text-red-400 transition-colors"
             aria-label="Logout"
             title="Logout"
           >
@@ -116,7 +116,7 @@ export default function StatsPage() {
             {sessions.length > 0 && (
               <Panel className={!(progress.tips && progress.tips.length > 0) ? "lg:col-span-2" : ""}>
                 <h2 className="text-sm text-neutral-400 uppercase tracking-wider mb-3">Recent Sessions</h2>
-                <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                <div className="space-y-1.5 max-h-72 overflow-y-auto" tabIndex={0} role="region" aria-label="Recent sessions list">
                   {sessions.slice(0, 15).map((session, i) => (
                     <div key={session.id || i} className="flex items-center justify-between px-3 py-1.5 rounded bg-neutral-800/40">
                       <span className="text-xs text-neutral-400 w-20">{session.date}</span>
@@ -137,7 +137,7 @@ export default function StatsPage() {
             {progress.tips && progress.tips.length > 0 && (
               <Panel className={sessions.length === 0 ? "lg:col-span-2" : ""}>
                 <h2 className="text-sm text-neutral-400 uppercase tracking-wider mb-3">AI Tips</h2>
-                <div className="space-y-2 max-h-80 overflow-y-auto">
+                <div className="space-y-2 max-h-80 overflow-y-auto" tabIndex={0} role="region" aria-label="AI tips list">
                   {progress.tips.slice(0, 10).map((tip, i) => (
                     <TipItem key={i} text={tip.text} explanation={tip.explanation} date={tip.createdAt.split("T")[0]} />
                   ))}
@@ -252,6 +252,10 @@ function TipItem({ text, explanation, date }: { text: string; explanation?: stri
     <div
       className={`rounded-lg transition-colors ${hasExplanation ? "cursor-pointer hover:bg-neutral-700/40" : ""} bg-neutral-800/40`}
       onClick={() => hasExplanation && setExpanded(!expanded)}
+      onKeyDown={(e) => { if (hasExplanation && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setExpanded(!expanded); } }}
+      tabIndex={hasExplanation ? 0 : undefined}
+      role={hasExplanation ? "button" : undefined}
+      aria-expanded={hasExplanation ? expanded : undefined}
     >
       <div className="flex items-start gap-2 px-3 py-2">
         <span className="text-amber-400 mt-0.5 text-sm">💡</span>

@@ -23,7 +23,7 @@ export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, e
   const time = stats ? Math.round(stats.duration / 1000) : Math.round(elapsed / 1000);
 
   return (
-    <div className="space-y-3" aria-live="polite" aria-atomic="true">
+    <div className="space-y-3" aria-live={stats ? "polite" : "off"} aria-atomic="true">
       <div className="flex items-center justify-center gap-10 sm:gap-16 py-6">
         <Stat
           icon={faGauge}
