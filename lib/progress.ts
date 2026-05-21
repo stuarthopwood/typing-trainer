@@ -55,8 +55,11 @@ export function recordSession(stats: SessionStats, mode: string, enrichment?: Se
   progress.totalSessions += 1;
   progress.totalCharsTyped += stats.totalChars;
 
-  if (stats.wpm > progress.bestWpm) progress.bestWpm = stats.wpm;
-  if (stats.accuracy > progress.bestAccuracy) progress.bestAccuracy = stats.accuracy;
+  const isZen = mode.startsWith("zen");
+  if (!isZen) {
+    if (stats.wpm > progress.bestWpm) progress.bestWpm = stats.wpm;
+    if (stats.accuracy > progress.bestAccuracy) progress.bestAccuracy = stats.accuracy;
+  }
 
   if (progress.lastSessionDate === today) {
     // same day, streak continues
@@ -87,13 +90,15 @@ export function recordSession(stats: SessionStats, mode: string, enrichment?: Se
 
   progress.recentSessions = [session, ...progress.recentSessions].slice(0, 50);
 
-  if (stats.accuracy >= 85) {
+  if (!isZen && stats.accuracy >= 85) {
     progress.levelProgress[mode] = (progress.levelProgress[mode] || 0) + 1;
   }
 
-  for (const stroke of stats.keyStrokes) {
-    if (!stroke.correct) {
-      progress.errorHeatmap[stroke.expected] = (progress.errorHeatmap[stroke.expected] || 0) + 1;
+  if (!isZen) {
+    for (const stroke of stats.keyStrokes) {
+      if (!stroke.correct) {
+        progress.errorHeatmap[stroke.expected] = (progress.errorHeatmap[stroke.expected] || 0) + 1;
+      }
     }
   }
 

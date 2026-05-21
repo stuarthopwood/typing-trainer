@@ -20,6 +20,10 @@ You review the ENTIRE codebase, not just recent changes. You do NOT
 modify any source. You report findings only.
 
 ## Project context
+- `.specify/feature.json` — current feature directory. Read the feature's
+  `spec.md` for any security-relevant requirements (auth, PIN isolation,
+  API gating, data deletion). Cross-reference the implementation against
+  those. If no feature.json exists, scan `specs/` for the most recent.
 - Constitution Principle V: backendless by default. Outbound calls
   limited to Vercel Blob and Anthropic API.
 - Engineering Standards: never commit secrets; the codebase MUST NOT

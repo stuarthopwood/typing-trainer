@@ -26,6 +26,12 @@ export async function POST(req: NextRequest) {
   if (!words || !Array.isArray(words) || words.length === 0 || words.length > 5) {
     return NextResponse.json({ error: "words must be an array of 1-5 strings" }, { status: 422 });
   }
+  if (words.some((w: unknown) => typeof w !== "string" || (w as string).length === 0 || (w as string).length > 100)) {
+    return NextResponse.json({ error: "invalid word format" }, { status: 422 });
+  }
+  if (context && (typeof context !== "string" || context.length > 500)) {
+    return NextResponse.json({ error: "context too large" }, { status: 422 });
+  }
 
   try {
     const client = new Anthropic();

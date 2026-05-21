@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { timingSafeEqual } from "crypto";
+
+function isAuthorized(req: NextRequest): boolean {
+  const key = req.headers.get("x-api-key");
+  const expected = process.env.PROGRESS_API_KEY;
+  if (!key || !expected) return false;
+  if (key.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(key), Buffer.from(expected));
+}
 
 const client = new Anthropic();
 
 export async function POST(req: NextRequest) {
-  const apiKey = req.headers.get("x-api-key");
-  if (apiKey !== process.env.PROGRESS_API_KEY) {
+  if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

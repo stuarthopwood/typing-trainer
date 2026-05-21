@@ -86,6 +86,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [zenTopic, setZenTopic] = useState<string | null>(null);
   const [zenText, setZenText] = useState("");
+  const [zenSpellResults, setZenSpellResults] = useState<Map<number, SpellCheckResult>>(new Map());
   const [zenWordCount, setZenWordCount] = useState(0);
   const [zenTopicLoading, setZenTopicLoading] = useState(false);
   const zenAvailable = !!process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
@@ -326,6 +327,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const handleZenComplete = useCallback((keyStrokes: KeyStroke[], text: string, spellResults: Map<number, SpellCheckResult>) => {
     const stats = buildZenSessionStats(keyStrokes, text, spellResults, zenTopic || "");
     setZenText(text);
+    setZenSpellResults(spellResults);
     setIsActive(false);
     setSessionStats({ wpm: stats.wpm, accuracy: stats.accuracy, totalChars: text.length, correctChars: text.length, errors: stats.misspelledWords.length, duration: stats.duration, keyStrokes });
     setSessionResults((prev) => [...prev, { wpm: stats.wpm, accuracy: stats.accuracy }]);
@@ -502,14 +504,16 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           onNewZenTopic={handleNewZenTopic}
         />
 
-        <LevelProgress
-          mode={mode}
-          qualifying={mode === "drill" ? (drillProgress[drillLevel] ?? 0) : (difficultyProgress[passageDifficulty] ?? 0)}
-          threshold={UNLOCK_SESSIONS_REQUIRED}
-          label={mode === "drill" ? drillLevel.replace("-", " ") : passageDifficulty}
-        />
+        {mode !== "zen" && (
+          <LevelProgress
+            mode={mode}
+            qualifying={mode === "drill" ? (drillProgress[drillLevel] ?? 0) : (difficultyProgress[passageDifficulty] ?? 0)}
+            threshold={UNLOCK_SESSIONS_REQUIRED}
+            label={mode === "drill" ? drillLevel.replace("-", " ") : passageDifficulty}
+          />
+        )}
 
-        <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} targets={practiceTargets} />
+        {mode === "drill" && <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} targets={practiceTargets} />}
 
         {(isActive || sessionStats) && (
           <StatsDisplay
@@ -570,7 +574,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
         )}
 
         {mode === "zen" ? (
-          <ZenResponsePanel text={zenText} spellResults={new Map()} />
+          <ZenResponsePanel text={zenText} spellResults={zenSpellResults} />
         ) : (
           <VisualKeyboard
             activeKey={activeKey}
