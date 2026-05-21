@@ -1,0 +1,15 @@
+{
+  "tasks": [
+    {
+      "id": "3e1b2248",
+      "cron": "7,37 7-23 * * *",
+      "prompt": "FIRST: check whether anything substantive has changed since the last vault summary. Run `git log --since=\"40 minutes ago\" --oneline` and `git status --short`. If there are no new commits, no changed files in the working tree, and no PR state changes since the last drop, **skip this fire entirely — do not drop a note**. Output a single line saying \"no-op, nothing to summarise\" and stop.\n\nOtherwise, drop a concise vault summary using mcp__second-brain__drop_note (area=personal, project=NeuralKeys, source=claude-code-typing-trainer, type=summary). Cover only what changed since the last summary: new commits (with hashes), PRs opened/merged/closed, files modified, decisions made, anything surprising. Bullet points. file:line citations where relevant. Tight.",
+      "createdAt": 1779301198405,
+      "lastFiredAt": 1779361838913,
+      "recurring": true,
+      "createdBySessionId": "a43cf566-5bb4-4c0a-b94a-655a34527a07",
+      "createdByPid": 10668,
+      "createdByProcStart": "639147915961065190"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import { timingSafeEqual } from "crypto";
 
 function getBlobPath(req: NextRequest): string | null {
   const pin = req.headers.get("x-user-pin");
-  if (!pin || pin.length < 4) return null;
+  if (!pin || pin.length < 4 || pin.length > 8 || !/^\d+$/.test(pin)) return null;
   return `neuralkeys/progress-${pin}.json`;
 }
 
