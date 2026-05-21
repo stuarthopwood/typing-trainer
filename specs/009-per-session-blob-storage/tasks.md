@@ -20,8 +20,8 @@
 
 **Purpose**: Shared infrastructure for session blob operations
 
-- [ ] T001 Create `app/api/sessions/route.ts` with auth scaffolding (copy pattern from `app/api/progress/route.ts` — `isAuthorized`, `getBlobPath`, PIN validation)
-- [ ] T002 [P] Create `lib/sessions.ts` with type exports and placeholder functions (`listSessions`, `deleteSession`, `migrateAllSessions`)
+- [x] T001 Create `app/api/sessions/route.ts` with auth scaffolding (copy pattern from `app/api/progress/route.ts` — `isAuthorized`, `getBlobPath`, PIN validation)
+- [x] T002 [P] Create `lib/sessions.ts` with type exports and placeholder functions (`listSessions`, `deleteSession`, `migrateAllSessions`)
 
 ---
 
@@ -31,9 +31,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Modify `app/api/progress/route.ts` PUT handler: when `newSession` is present, write it as an individual blob at `neuralkeys/sessions/{pin}/{session.id}.json` using `put()` with `allowOverwrite: true`. Strip `allSessions` from the progress blob payload before writing.
-- [ ] T004 [P] Add UUID v4 format validation helper to `app/api/sessions/route.ts` for session ID path parameter sanitization
-- [ ] T005 [P] Write BDD tests for the modified PUT handler in `tests/progress.test.ts` — Given a session payload, When PUT fires, Then individual blob is created AND allSessions is not written to progress blob
+- [x] T003 Modify `app/api/progress/route.ts` PUT handler: when `newSession` is present, write it as an individual blob at `neuralkeys/sessions/{pin}/{session.id}.json` using `put()` with `allowOverwrite: true`. Strip `allSessions` from the progress blob payload before writing.
+- [x] T004 [P] Add UUID v4 format validation helper to `app/api/sessions/route.ts` for session ID path parameter sanitization
+- [x] T005 [P] Write BDD tests for the modified PUT handler in `tests/progress.test.ts` — Given a session payload, When PUT fires, Then individual blob is created AND allSessions is not written to progress blob
 
 **Checkpoint**: Progress route now writes individual session blobs. User story implementation can begin.
 
@@ -47,14 +47,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] BDD test: Given session completes, When syncToRemote fires, Then individual session blob is written at correct path in `tests/sessions.test.ts`
-- [ ] T007 [P] [US1] BDD test: Given sync fails (network error), When session completes, Then local progress is preserved and sync-error toast fires in `tests/sessions.test.ts`
-- [ ] T008 [P] [US1] BDD test: Given session written successfully, When progress blob is read, Then allSessions array is absent in `tests/sessions.test.ts`
+- [x] T006 [P] [US1] BDD test: Given session completes, When syncToRemote fires, Then individual session blob is written at correct path in `tests/sessions.test.ts`
+- [x] T007 [P] [US1] BDD test: Given sync fails (network error), When session completes, Then local progress is preserved and sync-error toast fires in `tests/sessions.test.ts`
+- [x] T008 [P] [US1] BDD test: Given session written successfully, When progress blob is read, Then allSessions array is absent in `tests/sessions.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Modify `lib/progress.ts` `syncToRemote`: pass `newSession` to the PUT endpoint (already does this). Ensure the response includes confirmation that session blob was written. Remove any client-side `allSessions` accumulation logic.
-- [ ] T010 [US1] Verify `app/page.tsx` `handleComplete` correctly passes the enriched session to `syncToRemote` (already does — confirm no changes needed, only verify the data shape matches what the new PUT handler expects)
+- [x] T009 [US1] Modify `lib/progress.ts` `syncToRemote`: pass `newSession` to the PUT endpoint (already does this). Ensure the response includes confirmation that session blob was written. Remove any client-side `allSessions` accumulation logic.
+- [x] T010 [US1] Verify `app/page.tsx` `handleComplete` correctly passes the enriched session to `syncToRemote` (already does — confirm no changes needed, only verify the data shape matches what the new PUT handler expects)
 
 **Checkpoint**: Sessions are being individually stored. The old `allSessions` growth path is eliminated.
 
@@ -68,17 +68,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T011 [P] [US2] BDD test: Given 5 individual session blobs exist, When list endpoint is called, Then all 5 are returned with metadata in `tests/sessions.test.ts`
-- [ ] T012 [P] [US2] BDD test: Given legacy allSessions exists in progress blob, When stats page loads, Then legacy sessions are merged with individual blobs in `tests/sessions.test.ts`
-- [ ] T013 [P] [US2] BDD test: Given more than 100 sessions, When list is called without cursor, Then first page returned with cursor + hasMore=true in `tests/sessions.test.ts`
+- [x] T011 [P] [US2] BDD test: Given 5 individual session blobs exist, When list endpoint is called, Then all 5 are returned with metadata in `tests/sessions.test.ts`
+- [x] T012 [P] [US2] BDD test: Given legacy allSessions exists in progress blob, When stats page loads, Then legacy sessions are merged with individual blobs in `tests/sessions.test.ts`
+- [x] T013 [P] [US2] BDD test: Given more than 100 sessions, When list is called without cursor, Then first page returned with cursor + hasMore=true in `tests/sessions.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Implement `GET /api/sessions` (list) in `app/api/sessions/route.ts` — use `@vercel/blob` `list({ prefix: 'neuralkeys/sessions/{pin}/', token, cursor })`, return `{ sessions, cursor, hasMore }`
-- [ ] T015 [US2] Implement `loadAllSessions()` in `lib/sessions.ts` — client-side helper that calls the list endpoint, fetches each blob URL for full data, handles pagination
-- [ ] T016 [US2] Modify `app/stats/page.tsx` to use `loadAllSessions()` from `lib/sessions.ts` instead of `loadFullHistory()` from `lib/progress.ts`. Merge with legacy `recentSessions` from progress blob for backwards compat.
-- [ ] T017 [US2] Implement migration endpoint `POST /api/sessions?action=migrate` in `app/api/sessions/route.ts` — read allSessions from progress blob, write each as individual blob, clear allSessions from progress blob
-- [ ] T018 [US2] Auto-trigger migration on first stats-page load if `allSessions` is detected in the progress blob (call migrate endpoint, then reload session list)
+- [x] T014 [US2] Implement `GET /api/sessions` (list) in `app/api/sessions/route.ts` — use `@vercel/blob` `list({ prefix: 'neuralkeys/sessions/{pin}/', token, cursor })`, return `{ sessions, cursor, hasMore }`
+- [x] T015 [US2] Implement `loadAllSessions()` in `lib/sessions.ts` — client-side helper that calls the list endpoint, fetches each blob URL for full data, handles pagination
+- [x] T016 [US2] Modify `app/stats/page.tsx` to use `loadAllSessions()` from `lib/sessions.ts` instead of `loadFullHistory()` from `lib/progress.ts`. Merge with legacy `recentSessions` from progress blob for backwards compat.
+- [x] T017 [US2] Implement migration endpoint `POST /api/sessions?action=migrate` in `app/api/sessions/route.ts` — read allSessions from progress blob, write each as individual blob, clear allSessions from progress blob
+- [x] T018 [US2] Auto-trigger migration on first stats-page load if `allSessions` is detected in the progress blob (call migrate endpoint, then reload session list)
 
 **Checkpoint**: Stats page reads from individual blobs. Legacy data is migrated transparently.
 
@@ -92,15 +92,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] BDD test: Given session exists, When GET ?id={uuid} is called, Then full session payload returned in `tests/sessions.test.ts`
-- [ ] T020 [P] [US3] BDD test: Given session exists, When DELETE ?id={uuid} is called, Then blob is removed and progress summary recalculated in `tests/sessions.test.ts`
-- [ ] T021 [P] [US3] BDD test: Given session does not exist, When DELETE is called, Then 404 returned with no side effects in `tests/sessions.test.ts`
+- [x] T019 [P] [US3] BDD test: Given session exists, When GET ?id={uuid} is called, Then full session payload returned in `tests/sessions.test.ts`
+- [x] T020 [P] [US3] BDD test: Given session exists, When DELETE ?id={uuid} is called, Then blob is removed and progress summary recalculated in `tests/sessions.test.ts`
+- [x] T021 [P] [US3] BDD test: Given session does not exist, When DELETE is called, Then 404 returned with no side effects in `tests/sessions.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Implement `GET /api/sessions?id={uuid}` (fetch single) in `app/api/sessions/route.ts` — validate UUID, use `head()` to get blob URL, fetch and return full payload
-- [ ] T023 [US3] Implement `DELETE /api/sessions?id={uuid}` in `app/api/sessions/route.ts` — validate UUID, use `del()` to remove blob, then recalculate progress summary (list remaining sessions, compute bestWpm/bestAccuracy/totalSessions/totalCharsTyped, rewrite progress blob)
-- [ ] T024 [US3] Add `deleteSession()` helper to `lib/sessions.ts` — client-side function that calls DELETE endpoint and returns updated progress summary
+- [x] T022 [US3] Implement `GET /api/sessions?id={uuid}` (fetch single) in `app/api/sessions/route.ts` — validate UUID, use `head()` to get blob URL, fetch and return full payload
+- [x] T023 [US3] Implement `DELETE /api/sessions?id={uuid}` in `app/api/sessions/route.ts` — validate UUID, use `del()` to remove blob, then recalculate progress summary (list remaining sessions, compute bestWpm/bestAccuracy/totalSessions/totalCharsTyped, rewrite progress blob)
+- [x] T024 [US3] Add `deleteSession()` helper to `lib/sessions.ts` — client-side function that calls DELETE endpoint and returns updated progress summary
 
 **Checkpoint**: Full CRUD for individual sessions is operational.
 
@@ -110,11 +110,11 @@
 
 **Purpose**: Cleanup, backwards compatibility, documentation
 
-- [ ] T025 Remove `loadFullHistory()` from `lib/progress.ts` (dead code after US2 replaces it with `loadAllSessions()`)
-- [ ] T026 Remove `allSessions` handling from `GET /api/progress` (the `?full=true` path that returned allSessions — no longer needed)
-- [ ] T027 [P] Update `CHANGELOG.md` under v1.3.0 heading (new feature: per-session Blob storage)
-- [ ] T028 [P] Run full quality gate: lint + test + coverage + tsc + build
-- [ ] T029 Run quickstart.md verification steps against the preview deployment
+- [x] T025 Remove `loadFullHistory()` from `lib/progress.ts` (dead code after US2 replaces it with `loadAllSessions()`)
+- [x] T026 Remove `allSessions` handling from `GET /api/progress` (the `?full=true` path that returned allSessions — no longer needed)
+- [x] T027 [P] Update `CHANGELOG.md` under v1.3.0 heading (new feature: per-session Blob storage)
+- [x] T028 [P] Run full quality gate: lint + test + coverage + tsc + build
+- [x] T029 Run quickstart.md verification steps against the preview deployment
 
 ---
 

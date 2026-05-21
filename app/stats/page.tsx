@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartLine, faRightFromBracket, faSpinner } from "@fortawesome/free-solid-svg-icons";
-import { getProgress, clearUserPin, loadFullHistory, type ProgressData } from "@/lib/progress";
+import { getProgress, clearUserPin, type ProgressData } from "@/lib/progress";
+import { loadAllSessions, migrateAllSessions } from "@/lib/sessions";
 import type { EnrichedSessionSummary } from "@/lib/types";
 import GlowBorder from "@/components/GlowBorder";
 import KeyboardHeatmap, { type HeatmapCase } from "@/components/KeyboardHeatmap";
@@ -28,11 +29,19 @@ export default function StatsPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setProgress(getProgress());
-    loadFullHistory().then((sessions) => {
-      setAllSessions(sessions);
+    const p = getProgress();
+    setProgress(p);
+    migrateAllSessions().then(() => loadAllSessions()).then((sessions) => {
+      const local = p.recentSessions || [];
+      const seen = new Set(sessions.map((s) => s.id));
+      const merged = [...sessions, ...local.filter((s) => s.id && !seen.has(s.id))];
+      merged.sort((a, b) => (b.timestamp || b.date).localeCompare(a.timestamp || a.date));
+      setAllSessions(merged);
       setLoadingHistory(false);
-    }).catch(() => setLoadingHistory(false));
+    }).catch(() => {
+      setAllSessions(p.recentSessions || []);
+      setLoadingHistory(false);
+    });
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
