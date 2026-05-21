@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard, faBook, faLock } from "@fortawesome/free-solid-svg-icons";
+import { faKeyboard, faBook, faLock, faSpa } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
 import GlowBorder from "./GlowBorder";
 
@@ -15,10 +15,13 @@ interface ModeSelectorProps {
   drillProgress: Record<string, number>;
   difficultyProgress: Record<string, number>;
   unlockThreshold: number;
+  zenAvailable: boolean;
+  zenTopic?: string;
   onModeChange: (mode: TrainingMode) => void;
   onDrillLevelChange: (level: DrillLevel) => void;
   onDifficultyChange: (d: Passage["difficulty"]) => void;
   onCategoryChange: (c: Passage["category"] | "all") => void;
+  onNewZenTopic?: () => void;
 }
 
 const DIFFICULTIES: Passage["difficulty"][] = ["beginner", "intermediate", "advanced"];
@@ -33,10 +36,13 @@ export default function ModeSelector({
   drillProgress,
   difficultyProgress,
   unlockThreshold,
+  zenAvailable,
+  zenTopic,
   onModeChange,
   onDrillLevelChange,
   onDifficultyChange,
   onCategoryChange,
+  onNewZenTopic,
 }: ModeSelectorProps) {
   const difficultyIndex = DIFFICULTIES.indexOf(passageDifficulty);
 
@@ -82,7 +88,35 @@ export default function ModeSelector({
             <FontAwesomeIcon icon={faBook} className="w-5 h-5" />
           </button>
         </GlowBorder>
+        {zenAvailable && (
+          <GlowBorder radius="0.5rem" intensity="subtle">
+            <button
+              onClick={() => onModeChange("zen")}
+              className={`p-3 rounded-lg transition-all ${
+                mode === "zen"
+                  ? "text-[#00ff88] bg-[#00ff88]/10"
+                  : "text-neutral-300 hover:text-white"
+              }`}
+              aria-pressed={mode === "zen"}
+              aria-label="Zen mode — free typing"
+            >
+              <FontAwesomeIcon icon={faSpa} className="w-5 h-5" />
+            </button>
+          </GlowBorder>
+        )}
       </div>
+
+      {mode === "zen" && zenTopic && (
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-neutral-200 italic">&ldquo;{zenTopic}&rdquo;</p>
+          <button
+            onClick={onNewZenTopic}
+            className="px-3 py-1.5 text-xs text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-md transition-colors"
+          >
+            New Topic
+          </button>
+        </div>
+      )}
 
       {/* Difficulty — only meaningful in passage mode */}
       {mode === "passage" && (() => {

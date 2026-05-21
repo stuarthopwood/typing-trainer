@@ -19,7 +19,7 @@ export interface ProgressData {
 }
 
 export interface SessionEnrichment {
-  modeDetails: { type: "drill" | "passage"; level?: string; category?: string };
+  modeDetails: { type: "drill" | "passage" | "zen"; level?: string; category?: string; topic?: string; wordCount?: number; misspelledWords?: string[] };
   timingMetadata?: SessionTimingMetadata;
 }
 

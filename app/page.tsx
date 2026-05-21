@@ -17,8 +17,11 @@ import { getRandomPassage } from "@/lib/passages";
 import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress, getUserPin, setUserPin, clearUserPin, processDrillDemotion, getHighestUnlockedDrillLevel } from "@/lib/progress";
 import PinEntry from "@/components/PinEntry";
 import TipBox from "@/components/TipBox";
+import ZenTypingArea from "@/components/ZenTypingArea";
+import ZenResponsePanel from "@/components/ZenResponsePanel";
 import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
 import { computeSessionTimingMetadata, updatePracticeTargets } from "@/lib/analytics";
+import { fetchZenTopic, buildZenSessionStats, type SpellCheckResult } from "@/lib/zen";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState, PracticeTargets } from "@/lib/types";
 
 export default function Home() {
@@ -81,6 +84,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [bestAccuracy, setBestAccuracy] = useState(0);
   const [practiceTargets, setPracticeTargets] = useState<PracticeTargets | undefined>(undefined);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [zenTopic, setZenTopic] = useState<string | null>(null);
+  const [zenText, setZenText] = useState("");
+  const [zenWordCount, setZenWordCount] = useState(0);
+  const [zenTopicLoading, setZenTopicLoading] = useState(false);
+  const zenAvailable = !!process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -112,6 +120,13 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    if (mode === "zen") {
+      if (!zenTopic && !zenTopicLoading) {
+        setZenTopicLoading(true);
+        fetchZenTopic().then((t) => { setZenTopic(t); setZenTopicLoading(false); });
+      }
+      return;
+    }
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
       setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels, practiceTargets), source: "" });
@@ -120,7 +135,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       const passage = getRandomPassage(passageDifficulty, cat);
       setCurrentPassage({ text: passage.text, source: passage.source });
     }
-  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets]);
+  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets, zenTopic, zenTopicLoading]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchTip = useCallback(async (keyStrokes: KeyStroke[], text: string) => {
@@ -288,6 +303,86 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     recentErrorsRef.current = [];
   }, []);
 
+  const handleFetchZenTopic = useCallback(async () => {
+    setZenTopicLoading(true);
+    setZenText("");
+    setZenWordCount(0);
+    const topic = await fetchZenTopic();
+    setZenTopic(topic);
+    setZenTopicLoading(false);
+  }, []);
+
+  const handleZenProgress = useCallback((wc: number, keyStrokes: KeyStroke[]) => {
+    setZenWordCount(wc);
+    setIsActive(true);
+    if (keyStrokes.length >= 2) {
+      const duration = keyStrokes[keyStrokes.length - 1].timestamp - keyStrokes[0].timestamp;
+      const chars = keyStrokes.length;
+      setLiveWpm(Math.round((chars / 5) / (duration / 60000)));
+      setElapsed(duration);
+    }
+  }, []);
+
+  const handleZenComplete = useCallback((keyStrokes: KeyStroke[], text: string, spellResults: Map<number, SpellCheckResult>) => {
+    const stats = buildZenSessionStats(keyStrokes, text, spellResults, zenTopic || "");
+    setZenText(text);
+    setIsActive(false);
+    setSessionStats({ wpm: stats.wpm, accuracy: stats.accuracy, totalChars: text.length, correctChars: text.length, errors: stats.misspelledWords.length, duration: stats.duration, keyStrokes });
+    setSessionResults((prev) => [...prev, { wpm: stats.wpm, accuracy: stats.accuracy }]);
+
+    const modeLabel = "zen";
+    const timingMetadata = computeSessionTimingMetadata(keyStrokes);
+    const enrichment = {
+      modeDetails: { type: "zen" as const, topic: zenTopic || "", wordCount: stats.wordCount, misspelledWords: stats.misspelledWords },
+      timingMetadata,
+    };
+    const { progress: updated, session } = recordSession({ wpm: stats.wpm, accuracy: stats.accuracy, totalChars: text.length, correctChars: text.length - (stats.misspelledWords.length * 5), errors: stats.misspelledWords.length, duration: stats.duration, keyStrokes }, modeLabel, enrichment);
+
+    setUnlockVersion((v) => v + 1);
+    const baseXp = 5 + (stats.accuracy >= 95 ? 5 : stats.accuracy >= 85 ? 3 : 0);
+    updated.xp = (updated.xp || 0) + baseXp;
+
+    const context: AchievementContext = {
+      totalSessions: updated.totalSessions,
+      totalCharsTyped: updated.totalCharsTyped,
+      bestWpm: updated.bestWpm,
+      bestAccuracy: updated.bestAccuracy,
+      currentStreak: updated.currentStreak,
+      bestStreak: updated.bestStreak,
+      sessionWpm: stats.wpm,
+      sessionAccuracy: stats.accuracy,
+      levelProgress: updated.levelProgress,
+    };
+    const earned = checkAchievements(context, updated.achievements.map((a) => a.id));
+    if (earned.length > 0) {
+      const now = new Date().toISOString();
+      for (const a of earned) {
+        updated.achievements.push({ id: a.id, unlockedAt: now });
+        updated.xp += a.xp;
+      }
+      setNewAchievements(earned);
+      setTimeout(() => setNewAchievements([]), 4000);
+    }
+
+    localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
+    syncToRemote(updated, session).then((result) => {
+      if (!result.ok && result.reason !== "not-configured") {
+        setSyncError(result.reason === "network" ? "Sync failed — network error." : `Sync failed (HTTP ${result.status ?? "?"}).`);
+        setTimeout(() => setSyncError(null), 6000);
+      }
+    });
+  }, [zenTopic]);
+
+  const handleNewZenTopic = useCallback(() => {
+    if (isActive && zenWordCount > 0) {
+      setIsActive(false);
+      setSessionStats(null);
+      setLiveWpm(0);
+      setElapsed(0);
+    }
+    handleFetchZenTopic();
+  }, [isActive, zenWordCount, handleFetchZenTopic]);
+
   const handleKeyPress = useCallback((key: string, code: string, correct: boolean | null) => {
     clearTimeout(activeKeyTimeoutRef.current);
     const state = { key, code, correct, timestamp: performance.now() };
@@ -398,10 +493,13 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           drillProgress={drillProgress}
           difficultyProgress={difficultyProgress}
           unlockThreshold={UNLOCK_SESSIONS_REQUIRED}
+          zenAvailable={zenAvailable}
+          zenTopic={zenTopic || undefined}
           onModeChange={(m) => { setMode(m); handleNext(); }}
           onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
           onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
           onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
+          onNewZenTopic={handleNewZenTopic}
         />
 
         <LevelProgress
@@ -430,14 +528,31 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
         <div className="relative">
           <TipBox tip={currentTip} loading={tipLoading} />
-          <GlowBorder radius="1rem" intensity="punchy">
-            <TypingArea
-              text={currentText}
-              onComplete={handleComplete}
-              onProgress={handleProgress}
-              onKeyPress={handleKeyPress}
-            />
-          </GlowBorder>
+          {mode === "zen" ? (
+            zenTopicLoading ? (
+              <div className="flex items-center justify-center h-48 text-neutral-400 text-sm">Generating topic...</div>
+            ) : zenTopic ? (
+              <ZenTypingArea
+                topic={zenTopic}
+                onProgress={handleZenProgress}
+                onComplete={handleZenComplete}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-48 gap-3">
+                <p className="text-sm text-neutral-400">Couldn&apos;t generate topic</p>
+                <button onClick={handleFetchZenTopic} className="px-4 py-2 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg transition-colors">Try again</button>
+              </div>
+            )
+          ) : (
+            <GlowBorder radius="1rem" intensity="punchy">
+              <TypingArea
+                text={currentText}
+                onComplete={handleComplete}
+                onProgress={handleProgress}
+                onKeyPress={handleKeyPress}
+              />
+            </GlowBorder>
+          )}
         </div>
 
         {sessionStats && newAchievements.length > 0 && (
@@ -454,10 +569,14 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           </div>
         )}
 
-        <VisualKeyboard
-          activeKey={activeKey}
-          nextExpectedKey={position < currentText.length ? currentText[position] : null}
-        />
+        {mode === "zen" ? (
+          <ZenResponsePanel text={zenText} spellResults={new Map()} />
+        ) : (
+          <VisualKeyboard
+            activeKey={activeKey}
+            nextExpectedKey={position < currentText.length ? currentText[position] : null}
+          />
+        )}
 
         {mode === "passage" && !sessionStats && currentPassage.source && (
           <p className="text-center text-xs text-slate-400 dark:text-slate-500">

@@ -4,6 +4,17 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-05-21
+
+### Added
+- **Zen Mode** — third training mode: free-type on AI-generated topic prompts with real-time spell-checking.
+- New `ZenTypingArea` component: textarea + overlay, fixed-height window, fading previous lines, password-manager suppression.
+- New `ZenResponsePanel` component: scrollable full-response display (replaces visual keyboard in zen mode).
+- API routes: `POST /api/zen-topic` (Anthropic Haiku topic generation), `POST /api/zen-spellcheck` (batch spell-check, 3s timeout).
+- Hybrid batch spell-check: fires on 1.5s pause OR 5 unchecked words. Final catch-up on Done.
+- Zen Mode hidden when no API key configured.
+- Zen sessions: earn XP + streaks + WPM/accuracy achievements; excluded from drill progress, error heatmap, bestWpm aggregates.
+
 ## [1.4.0] — 2026-05-21
 
 ### Added
