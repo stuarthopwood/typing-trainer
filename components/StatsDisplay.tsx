@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGauge, faBullseye, faFire, faClock } from "@fortawesome/free-solid-svg-icons";
 import type { SessionStats } from "@/lib/types";
@@ -17,7 +18,7 @@ interface StatsDisplayProps {
   allTimeBestAccuracy?: number;
 }
 
-export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, elapsed, combo, sessionAvgWpm, sessionAvgAccuracy, allTimeBestWpm, allTimeBestAccuracy }: StatsDisplayProps) {
+export default memo(function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, elapsed, combo, sessionAvgWpm, sessionAvgAccuracy, allTimeBestWpm, allTimeBestAccuracy }: StatsDisplayProps) {
   const wpm = stats?.wpm ?? liveWpm;
   const accuracy = stats?.accuracy ?? liveAccuracy;
   const time = stats ? Math.round(stats.duration / 1000) : Math.round(elapsed / 1000);
@@ -44,7 +45,7 @@ export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, e
           value={`${time}s`}
           label="Time"
           active={isActive}
-          color="text-neutral-500"
+          color="text-neutral-400"
         />
         {combo > 2 && (
           <Stat
@@ -57,7 +58,7 @@ export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, e
         )}
       </div>
       {(sessionAvgWpm !== undefined || allTimeBestWpm !== undefined) && (
-        <div className="flex items-center justify-center gap-8 text-xs text-neutral-500">
+        <div className="flex items-center justify-center gap-8 text-xs text-neutral-400">
           {sessionAvgWpm !== undefined && (
             <span>Session avg: <strong className="text-neutral-400">{sessionAvgWpm} WPM</strong> / <strong className="text-neutral-400">{sessionAvgAccuracy}%</strong></span>
           )}
@@ -68,7 +69,7 @@ export default function StatsDisplay({ stats, liveWpm, liveAccuracy, isActive, e
       )}
     </div>
   );
-}
+});
 
 function Stat({
   icon,
@@ -88,7 +89,7 @@ function Stat({
       <div className={`text-4xl sm:text-5xl font-bold ${color}`}>
         {value}
       </div>
-      <div className="text-xs text-neutral-500 mt-1 flex items-center justify-center gap-1">
+      <div className="text-xs text-neutral-400 mt-1 flex items-center justify-center gap-1">
         <FontAwesomeIcon icon={icon} className="w-3 h-3" />
         {label}
       </div>

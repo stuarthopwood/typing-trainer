@@ -22,6 +22,9 @@ export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPre
   const pendingKeysRef = useRef<Map<string, { timestamp: number; strokeIndex: number }>>(new Map());
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const positionRef = useRef(0);
+  const shakeTimeoutRef = useRef<NodeJS.Timeout>(undefined);
+  positionRef.current = position;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -34,10 +37,13 @@ export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPre
 
       e.preventDefault();
 
+      const pos = positionRef.current;
+
       if (e.key === "Backspace") {
         onKeyPress?.(e.key, e.code, null);
-        if (position > 0) {
-          const newPos = position - 1;
+        if (pos > 0) {
+          const newPos = pos - 1;
+          positionRef.current = newPos;
           setPosition(newPos);
           setErrors((prev) => {
             const next = new Set(prev);
@@ -48,9 +54,9 @@ export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPre
         return;
       }
 
-      if (position >= text.length) return;
+      if (pos >= text.length) return;
 
-      const expected = text[position];
+      const expected = text[pos];
       const actual = e.key === "Enter" ? "\n" : e.key;
       const correct = actual === expected;
       const now = performance.now();
@@ -74,12 +80,14 @@ export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPre
       onKeyPress?.(e.key, e.code, correct);
 
       if (!correct) {
-        setErrors((prev) => new Set(prev).add(position));
+        setErrors((prev) => new Set(prev).add(pos));
+        clearTimeout(shakeTimeoutRef.current);
         setShakeError(true);
-        setTimeout(() => setShakeError(false), 300);
+        shakeTimeoutRef.current = setTimeout(() => setShakeError(false), 300);
       }
 
-      const newPosition = position + 1;
+      const newPosition = pos + 1;
+      positionRef.current = newPosition;
       setPosition(newPosition);
       onProgress(newPosition, keyStrokesRef.current);
 
@@ -97,7 +105,7 @@ export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPre
         onComplete(keyStrokesRef.current);
       }
     },
-    [position, text, onComplete, onProgress, onKeyPress]
+    [text, onComplete, onProgress, onKeyPress]
   );
 
   useEffect(() => {
@@ -123,6 +131,7 @@ export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPre
   }, []);
 
   useEffect(() => {
+    positionRef.current = 0;
     setPosition(0);
     setErrors(new Set());
     keyStrokesRef.current = [];

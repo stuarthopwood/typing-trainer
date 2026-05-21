@@ -70,6 +70,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const tipCooldownRef = useRef(false);
   const recentErrorsRef = useRef<KeyStroke[]>([]);
   const activeKeyTimeoutRef = useRef<NodeJS.Timeout>(undefined);
+  const activeKeyRef = useRef<ActiveKeyState | null>(null);
 
   const [unlockedDrillLevels, setUnlockedDrillLevels] = useState<Set<string>>(new Set(["home-row"]));
   const [unlockedDifficulties, setUnlockedDifficulties] = useState<Set<string>>(new Set(["beginner"]));
@@ -172,7 +173,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       const errorCount = keyStrokes.filter((k) => !k.correct).length;
       if (errorCount >= 5 && !tipCooldownRef.current && !tipLoading) {
         tipCooldownRef.current = true;
-        fetchTip(keyStrokes, currentText);
+        setTimeout(() => fetchTip(keyStrokes, currentText), 0);
         setTimeout(() => { tipCooldownRef.current = false; }, 30000);
       }
     }
@@ -292,8 +293,10 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
   const handleKeyPress = useCallback((key: string, code: string, correct: boolean | null) => {
     clearTimeout(activeKeyTimeoutRef.current);
-    setActiveKey({ key, code, correct, timestamp: performance.now() });
-    activeKeyTimeoutRef.current = setTimeout(() => setActiveKey(null), 150);
+    const state = { key, code, correct, timestamp: performance.now() };
+    activeKeyRef.current = state;
+    setActiveKey(state);
+    activeKeyTimeoutRef.current = setTimeout(() => { activeKeyRef.current = null; setActiveKey(null); }, 150);
     if (soundEnabledRef.current && correct !== null) {
       if (correct) playKeyClick();
       else playKeyError();
@@ -302,14 +305,15 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (activeKey?.code === e.code) {
+      if (activeKeyRef.current?.code === e.code) {
         clearTimeout(activeKeyTimeoutRef.current);
+        activeKeyRef.current = null;
         setActiveKey(null);
       }
     };
     window.addEventListener("keyup", handleKeyUp);
     return () => window.removeEventListener("keyup", handleKeyUp);
-  }, [activeKey]);
+  }, []);
 
   useEffect(() => {
     if (!sessionStats) return;
