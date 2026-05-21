@@ -57,7 +57,7 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={() => onModeChange("drill")}
-            className={`p-2.5 rounded-lg transition-all ${
+            className={`p-3 rounded-lg transition-all ${
               mode === "drill"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
                 : "text-neutral-300 hover:text-white"
@@ -71,7 +71,7 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={() => onModeChange("passage")}
-            className={`p-2.5 rounded-lg transition-all ${
+            className={`p-3 rounded-lg transition-all ${
               mode === "passage"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
                 : "text-neutral-300 hover:text-white"
@@ -93,7 +93,7 @@ export default function ModeSelector({
             <button
               onClick={cycleDifficulty}
               disabled={!canCycle}
-              className={`flex items-end gap-0.5 p-2 rounded-lg transition-all ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
+              className={`flex items-end gap-0.5 p-3 rounded-lg transition-all ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
               title={canCycle ? `Difficulty: ${passageDifficulty} (click to cycle unlocked levels)` : `Difficulty: ${passageDifficulty} (unlock more by completing sessions at 85%+ accuracy)`}
             >
               <span
@@ -135,20 +135,19 @@ export default function ModeSelector({
               <GlowBorder key={level} radius="0.375rem" intensity="subtle" disabled={!unlocked}>
                 <button
                   onClick={() => unlocked && onDrillLevelChange(level)}
-                  disabled={!unlocked}
-                  aria-disabled={!unlocked}
+                  disabled={!unlocked && drillLevel !== level}
                   className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 ${
-                    !unlocked
-                      ? "text-neutral-400 cursor-not-allowed"
-                      : drillLevel === level
-                        ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
+                    drillLevel === level
+                      ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
+                      : !unlocked
+                        ? "text-neutral-400 cursor-not-allowed"
                         : "text-neutral-300 hover:text-white"
                   }`}
                   title={!unlocked ? `Locked — ${progress}/${unlockThreshold} qualifying sessions (85%+ accuracy)` : level.replace("-", " ")}
                 >
-                  {!unlocked && <FontAwesomeIcon icon={faLock} className="w-2.5 h-2.5" />}
+                  {!unlocked && drillLevel !== level && <FontAwesomeIcon icon={faLock} className="w-2.5 h-2.5" />}
                   {level.replace("-", " ")}
-                  {!unlocked && <span className="text-xs text-neutral-400">{progress}/{unlockThreshold}</span>}
+                  {!unlocked && drillLevel !== level && <span className="text-xs text-neutral-400">{progress}/{unlockThreshold}</span>}
                 </button>
               </GlowBorder>
             );

@@ -65,7 +65,7 @@ export default function AnalyticsSummary({ sessions }: AnalyticsSummaryProps) {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Analytics</h2>
+      <h3 className="text-sm text-neutral-400 uppercase tracking-wider text-center">Analytics</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <AnalyticCard
           label="7-day WPM"
@@ -116,9 +116,9 @@ function AnalyticCard({ label, value, subtitle, delta, deltaColor, valueColor }:
     <div className="bg-neutral-800/30 rounded-lg p-3 text-center">
       <div className={`text-xl font-bold ${valueColor || "text-neutral-200"}`}>
         {value}
-        {delta && <span className={`text-xs ml-1 ${deltaColor || "text-neutral-500"}`}>{delta}</span>}
+        {delta && <span className={`text-xs ml-1 ${deltaColor || "text-neutral-400"}`}>{delta}</span>}
       </div>
-      <div className="text-xs text-neutral-500 mt-1">{label}</div>
+      <div className="text-xs text-neutral-400 mt-1">{label}</div>
       {subtitle && <div className="text-[10px] text-neutral-600 mt-0.5">{subtitle}</div>}
     </div>
   );

@@ -26,7 +26,7 @@ export default function ModeBreakdown({ sessions }: ModeBreakdownProps) {
 
   return (
     <div className="space-y-2">
-      <h2 className="text-sm text-neutral-500 uppercase tracking-wider text-center">Mode Breakdown</h2>
+      <h3 className="text-sm text-neutral-400 uppercase tracking-wider text-center">Mode Breakdown</h3>
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>
           <Pie

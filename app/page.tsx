@@ -70,6 +70,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const tipCooldownRef = useRef(false);
   const recentErrorsRef = useRef<KeyStroke[]>([]);
   const activeKeyTimeoutRef = useRef<NodeJS.Timeout>(undefined);
+  const activeKeyRef = useRef<ActiveKeyState | null>(null);
 
   const [unlockedDrillLevels, setUnlockedDrillLevels] = useState<Set<string>>(new Set(["home-row"]));
   const [unlockedDifficulties, setUnlockedDifficulties] = useState<Set<string>>(new Set(["beginner"]));
@@ -172,7 +173,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       const errorCount = keyStrokes.filter((k) => !k.correct).length;
       if (errorCount >= 5 && !tipCooldownRef.current && !tipLoading) {
         tipCooldownRef.current = true;
-        fetchTip(keyStrokes, currentText);
+        setTimeout(() => fetchTip(keyStrokes, currentText), 0);
         setTimeout(() => { tipCooldownRef.current = false; }, 30000);
       }
     }
@@ -292,8 +293,10 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
   const handleKeyPress = useCallback((key: string, code: string, correct: boolean | null) => {
     clearTimeout(activeKeyTimeoutRef.current);
-    setActiveKey({ key, code, correct, timestamp: performance.now() });
-    activeKeyTimeoutRef.current = setTimeout(() => setActiveKey(null), 150);
+    const state = { key, code, correct, timestamp: performance.now() };
+    activeKeyRef.current = state;
+    setActiveKey(state);
+    activeKeyTimeoutRef.current = setTimeout(() => { activeKeyRef.current = null; setActiveKey(null); }, 150);
     if (soundEnabledRef.current && correct !== null) {
       if (correct) playKeyClick();
       else playKeyError();
@@ -302,14 +305,15 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (activeKey?.code === e.code) {
+      if (activeKeyRef.current?.code === e.code) {
         clearTimeout(activeKeyTimeoutRef.current);
+        activeKeyRef.current = null;
         setActiveKey(null);
       }
     };
     window.addEventListener("keyup", handleKeyUp);
     return () => window.removeEventListener("keyup", handleKeyUp);
-  }, [activeKey]);
+  }, []);
 
   useEffect(() => {
     if (!sessionStats) return;
@@ -339,18 +343,18 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSoundEnabled((s) => { soundEnabledRef.current = !s; return !s; })}
-              className={`transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-300 hover:text-white"}`}
+              className={`p-3 transition-colors ${soundEnabled ? "text-[#00ff88]" : "text-neutral-300 hover:text-white"}`}
               aria-label={soundEnabled ? "Disable sound" : "Enable sound"}
               aria-pressed={soundEnabled}
             >
               <FontAwesomeIcon icon={soundEnabled ? faVolumeHigh : faVolumeXmark} className="w-4 h-4" />
             </button>
-            <Link href="/stats" className="text-neutral-300 hover:text-[#00ff88] transition-colors" title="Stats">
+            <Link href="/stats" className="p-3 text-neutral-300 hover:text-[#00ff88] transition-colors" title="Stats">
               <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
             </Link>
             <button
               onClick={onLogout}
-              className="text-neutral-300 hover:text-red-400 transition-colors"
+              className="p-3 text-neutral-300 hover:text-red-400 transition-colors"
               aria-label="Logout"
               title="Logout"
             >
@@ -441,7 +445,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
         {sessionStats && newAchievements.length > 0 && (
           <div className="text-center">
-            <div className="space-y-2" role="status" aria-live="polite">
+            <div className="space-y-2" role="status" aria-live="polite" aria-atomic="true">
               {newAchievements.map((a) => (
                 <div key={a.id} className="inline-flex items-center gap-2 px-4 py-2 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-sm animate-[pulse_2s_ease-in-out_infinite]">
                   <span className="text-lg">{a.icon}</span>
