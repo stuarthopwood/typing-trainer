@@ -251,13 +251,10 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
       localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
       syncToRemote(updated, session).then((result) => {
-        if (!result.ok) {
-          const reason =
-            result.reason === "not-configured"
-              ? "Sync skipped — no PIN/API key set."
-              : result.reason === "network"
-                ? "Sync failed — network error. Progress saved locally."
-                : `Sync failed (HTTP ${result.status ?? "?"}). Progress saved locally.`;
+        if (!result.ok && result.reason !== "not-configured") {
+          const reason = result.reason === "network"
+            ? "Sync failed — network error. Progress saved locally."
+            : `Sync failed (HTTP ${result.status ?? "?"}). Progress saved locally.`;
           setSyncError(reason);
           setTimeout(() => setSyncError(null), 6000);
         }
