@@ -189,7 +189,8 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
           data-1p-ignore
           data-lpignore="true"
           data-form-type="other"
-          aria-label={`Free-type your response to: ${topic}`}
+          aria-label="Type your response"
+          aria-describedby="zen-topic-prompt"
         />
         <div
           ref={overlayRef}

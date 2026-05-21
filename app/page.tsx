@@ -534,7 +534,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           <TipBox tip={currentTip} loading={tipLoading} />
           {mode === "zen" ? (
             zenTopicLoading ? (
-              <div className="flex items-center justify-center h-48 text-neutral-400 text-sm">Generating topic...</div>
+              <div className="flex items-center justify-center h-48 text-neutral-400 text-sm" role="status" aria-live="polite">Generating topic...</div>
             ) : zenTopic ? (
               <ZenTypingArea
                 topic={zenTopic}
@@ -542,7 +542,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
                 onComplete={handleZenComplete}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center h-48 gap-3">
+              <div className="flex flex-col items-center justify-center h-48 gap-3" role="status" aria-live="polite">
                 <p className="text-sm text-neutral-400">Couldn&apos;t generate topic</p>
                 <button onClick={handleFetchZenTopic} className="px-4 py-2 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg transition-colors">Try again</button>
               </div>

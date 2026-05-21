@@ -108,10 +108,11 @@ export default function ModeSelector({
 
       {mode === "zen" && zenTopic && (
         <div className="flex items-center gap-3">
-          <p className="text-sm text-neutral-200 italic">&ldquo;{zenTopic}&rdquo;</p>
+          <p id="zen-topic-prompt" className="text-sm text-neutral-200 italic">&ldquo;{zenTopic}&rdquo;</p>
           <button
             onClick={onNewZenTopic}
             className="px-3 py-1.5 text-xs text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-md transition-colors"
+            aria-label="Generate a new topic (cancels current session)"
           >
             New Topic
           </button>
