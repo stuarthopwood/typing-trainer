@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartLine, faRightFromBracket, faSpinner } from "@fortawesome/free-solid-svg-icons";
-import { getProgress, clearUserPin, type ProgressData } from "@/lib/progress";
-import { loadAllSessions, migrateAllSessions } from "@/lib/sessions";
+import { faArrowLeft, faGauge, faBullseye, faFire, faKeyboard, faChartLine, faRightFromBracket, faSpinner, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { getProgress, clearUserPin, recalculateProgress, type ProgressData } from "@/lib/progress";
+import { loadAllSessions, migrateAllSessions, deleteSession } from "@/lib/sessions";
+import UndoToast from "@/components/UndoToast";
 import type { EnrichedSessionSummary } from "@/lib/types";
 import GlowBorder from "@/components/GlowBorder";
 import KeyboardHeatmap, { type HeatmapCase } from "@/components/KeyboardHeatmap";
@@ -26,6 +27,9 @@ export default function StatsPage() {
   const [allSessions, setAllSessions] = useState<EnrichedSessionSummary[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [heatmapCase, setHeatmapCase] = useState<HeatmapCase>("lower");
+  const [pendingDeletes, setPendingDeletes] = useState<Record<string, EnrichedSessionSummary>>({});
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const pendingTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -50,6 +54,52 @@ export default function StatsPage() {
     localStorage.removeItem("typing-trainer-progress");
     router.push("/");
   };
+
+  const handleDeleteExpire = useCallback(async (sessionId: string) => {
+    pendingTimers.current.delete(sessionId);
+    const success = await deleteSession(sessionId);
+    if (success) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      setPendingDeletes((prev) => { const { [sessionId]: _removed, ...rest } = prev; return rest; });
+      const p = recalculateProgress(sessionId);
+      setProgress(p);
+    } else {
+      setPendingDeletes((prev) => {
+        const { [sessionId]: session, ...rest } = prev;
+        if (session) {
+          setAllSessions((s) => [...s, session].sort((a, b) => (b.timestamp || b.date).localeCompare(a.timestamp || a.date)));
+        }
+        return rest;
+      });
+      setDeleteError("Delete failed — session restored.");
+      setTimeout(() => setDeleteError(null), 4000);
+    }
+  }, []);
+
+  const handleDeleteExpireRef = useRef(handleDeleteExpire);
+  handleDeleteExpireRef.current = handleDeleteExpire;
+
+  const handleDelete = useCallback((session: EnrichedSessionSummary) => {
+    if (!session.id) return;
+    const id = session.id;
+    setAllSessions((prev) => prev.filter((s) => s.id !== id));
+    setPendingDeletes((prev) => ({ ...prev, [id]: session }));
+    const timerId = setTimeout(() => handleDeleteExpireRef.current(id), 5000);
+    pendingTimers.current.set(id, timerId);
+  }, []);
+
+  const handleUndo = useCallback((sessionId: string) => {
+    const timer = pendingTimers.current.get(sessionId);
+    if (timer) clearTimeout(timer);
+    pendingTimers.current.delete(sessionId);
+    setPendingDeletes((prev) => {
+      const { [sessionId]: session, ...rest } = prev;
+      if (session) {
+        setAllSessions((s) => [...s, session].sort((a, b) => (b.timestamp || b.date).localeCompare(a.timestamp || a.date)));
+      }
+      return rest;
+    });
+  }, []);
 
   if (!progress) return null;
 
@@ -125,9 +175,9 @@ export default function StatsPage() {
             {sessions.length > 0 && (
               <Panel className={!(progress.tips && progress.tips.length > 0) ? "lg:col-span-2" : ""}>
                 <h2 className="text-sm text-neutral-400 uppercase tracking-wider mb-3">Recent Sessions</h2>
-                <div className="space-y-1.5 max-h-72 overflow-y-auto" tabIndex={0} role="region" aria-label="Recent sessions list">
+                <div className="space-y-1.5 max-h-72 overflow-y-auto" role="region" aria-label="Recent sessions list">
                   {sessions.slice(0, 15).map((session, i) => (
-                    <div key={session.id || i} className="flex items-center justify-between px-3 py-1.5 rounded bg-neutral-800/40">
+                    <div key={session.id || i} className="flex items-center justify-between px-3 py-1.5 rounded bg-neutral-800/40 group">
                       <span className="text-xs text-neutral-400 w-20">{session.date}</span>
                       <span className="text-xs text-neutral-300 w-28 truncate">{session.mode}</span>
                       {session.duration > 0 && (
@@ -137,6 +187,15 @@ export default function StatsPage() {
                       <span className={`text-sm font-bold w-12 text-right ${session.accuracy >= 95 ? "text-[#00ff88]" : session.accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>
                         {session.accuracy}%
                       </span>
+                      {session.id && (
+                        <button
+                          onClick={() => handleDelete(session)}
+                          className="p-4 text-neutral-600 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-red-400/60 focus:ring-offset-1 focus:ring-offset-neutral-800 rounded"
+                          aria-label={`Delete session from ${session.date} — ${session.wpm} WPM`}
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -216,6 +275,23 @@ export default function StatsPage() {
 
         {/* Row 8: Mode breakdown */}
         <Panel><ModeBreakdown sessions={sessions} /></Panel>
+      </div>
+
+      {/* Undo toasts + error toast */}
+      <div className="fixed bottom-4 right-4 sm:right-6 z-30 space-y-2 max-w-sm">
+        {deleteError && (
+          <div className="px-4 py-3 bg-red-500/10 border border-red-500/40 rounded-lg text-sm text-red-200" role="alert">
+            {deleteError}
+          </div>
+        )}
+        {Object.entries(pendingDeletes).map(([id, session]) => (
+          <UndoToast
+            key={id}
+            message={`Deleted session — ${session.date}, ${session.wpm} WPM`}
+            onUndo={() => handleUndo(id)}
+            onExpire={() => handleDeleteExpire(id)}
+          />
+        ))}
       </div>
     </main>
   );

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { loadAllSessions, deleteSession, migrateAllSessions } from "@/lib/sessions";
+import { recalculateProgress } from "@/lib/progress";
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -132,15 +133,15 @@ describe("Sessions — deleteSession", () => {
     expect(result).toBe(false);
   });
 
-  it("should return false when no PIN set", async () => {
-    // Given no PIN in localStorage
+  it("should return true when no PIN set (local-only delete succeeds)", async () => {
+    // Given no PIN in localStorage (API not configured)
     localStorageMock.removeItem("neuralkeys-pin");
 
     // When deleteSession is called
     const result = await deleteSession("550e8400-e29b-41d4-a716-446655440000");
 
-    // Then it returns false without making a network call
-    expect(result).toBe(false);
+    // Then it returns true (local deletion proceeds, remote skipped)
+    expect(result).toBe(true);
   });
 });
 
@@ -171,5 +172,73 @@ describe("Sessions — migrateAllSessions", () => {
 
     // Then zeros returned gracefully
     expect(result).toEqual({ migrated: 0, skipped: 0 });
+  });
+});
+
+describe("Sessions — recalculateProgress after deletion", () => {
+  it("should recalculate bestWpm from remaining sessions when best is deleted", () => {
+    // Given progress has sessions with bestWpm held by a specific session
+    const progress = {
+      totalSessions: 3, totalCharsTyped: 150, bestWpm: 20, bestAccuracy: 96,
+      currentStreak: 1, bestStreak: 1, lastSessionDate: "2026-05-20",
+      recentSessions: [
+        { id: "s1", timestamp: "2026-05-20T15:00:00Z", date: "2026-05-20", wpm: 20, accuracy: 96, mode: "drill:home-row", duration: 30000, charsTyped: 50, modeDetails: { type: "drill" as const, level: "home-row" } },
+        { id: "s2", timestamp: "2026-05-20T14:00:00Z", date: "2026-05-20", wpm: 15, accuracy: 90, mode: "drill:home-row", duration: 35000, charsTyped: 50, modeDetails: { type: "drill" as const, level: "home-row" } },
+        { id: "s3", timestamp: "2026-05-19T10:00:00Z", date: "2026-05-19", wpm: 12, accuracy: 88, mode: "drill:home-row", duration: 40000, charsTyped: 50, modeDetails: { type: "drill" as const, level: "home-row" } },
+      ],
+      errorHeatmap: {}, levelProgress: {}, xp: 0, achievements: [], tips: [], drillLowAccuracyStreak: {},
+    };
+    localStorageMock.setItem("typing-trainer-progress", JSON.stringify(progress));
+
+    // When the session with bestWpm (s1, 20 WPM) is removed
+    const result = recalculateProgress("s1");
+
+    // Then bestWpm drops to 15 (next highest)
+    expect(result.bestWpm).toBe(15);
+    expect(result.totalSessions).toBe(2);
+    expect(result.recentSessions).toHaveLength(2);
+  });
+
+  it("should decrement totalSessions and totalCharsTyped", () => {
+    // Given progress with 3 sessions totaling 150 chars
+    const progress = {
+      totalSessions: 3, totalCharsTyped: 150, bestWpm: 18, bestAccuracy: 96,
+      currentStreak: 1, bestStreak: 1, lastSessionDate: "2026-05-20",
+      recentSessions: [
+        { id: "s1", timestamp: "2026-05-20T15:00:00Z", date: "2026-05-20", wpm: 18, accuracy: 96, mode: "drill:home-row", duration: 30000, charsTyped: 50, modeDetails: { type: "drill" as const, level: "home-row" } },
+        { id: "s2", timestamp: "2026-05-20T14:00:00Z", date: "2026-05-20", wpm: 15, accuracy: 90, mode: "drill:home-row", duration: 35000, charsTyped: 50, modeDetails: { type: "drill" as const, level: "home-row" } },
+        { id: "s3", timestamp: "2026-05-19T10:00:00Z", date: "2026-05-19", wpm: 12, accuracy: 88, mode: "drill:home-row", duration: 40000, charsTyped: 50, modeDetails: { type: "drill" as const, level: "home-row" } },
+      ],
+      errorHeatmap: {}, levelProgress: {}, xp: 0, achievements: [], tips: [], drillLowAccuracyStreak: {},
+    };
+    localStorageMock.setItem("typing-trainer-progress", JSON.stringify(progress));
+
+    // When session s2 (50 chars) is removed
+    const result = recalculateProgress("s2");
+
+    // Then totalSessions decrements and totalCharsTyped loses s2's chars
+    expect(result.totalSessions).toBe(2);
+    expect(result.totalCharsTyped).toBe(100);
+  });
+
+  it("should handle removing a non-existent session gracefully", () => {
+    // Given progress with sessions
+    const progress = {
+      totalSessions: 2, totalCharsTyped: 100, bestWpm: 18, bestAccuracy: 96,
+      currentStreak: 1, bestStreak: 1, lastSessionDate: "2026-05-20",
+      recentSessions: [
+        { id: "s1", timestamp: "2026-05-20T15:00:00Z", date: "2026-05-20", wpm: 18, accuracy: 96, mode: "drill:home-row", duration: 30000, charsTyped: 50, modeDetails: { type: "drill" as const, level: "home-row" } },
+        { id: "s2", timestamp: "2026-05-20T14:00:00Z", date: "2026-05-20", wpm: 15, accuracy: 90, mode: "drill:home-row", duration: 35000, charsTyped: 50, modeDetails: { type: "drill" as const, level: "home-row" } },
+      ],
+      errorHeatmap: {}, levelProgress: {}, xp: 0, achievements: [], tips: [], drillLowAccuracyStreak: {},
+    };
+    localStorageMock.setItem("typing-trainer-progress", JSON.stringify(progress));
+
+    // When a non-existent session ID is removed
+    const result = recalculateProgress("nonexistent");
+
+    // Then nothing changes except totalSessions decrements (since we don't know the original count was exact)
+    expect(result.totalSessions).toBe(1);
+    expect(result.recentSessions).toHaveLength(2);
   });
 });

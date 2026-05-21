@@ -266,6 +266,25 @@ export async function loadFromRemote(): Promise<ProgressData | null> {
   }
 }
 
+export function recalculateProgress(removedSessionId: string): ProgressData {
+  const p = getProgress();
+  const remaining = (p.recentSessions || []).filter((s) => s.id !== removedSessionId);
+  p.recentSessions = remaining;
+  p.totalSessions = Math.max(0, p.totalSessions - 1);
+  let bestWpm = 0, bestAcc = 0, chars = 0;
+  for (const s of remaining) {
+    if (s.wpm > bestWpm) bestWpm = s.wpm;
+    if (s.accuracy > bestAcc) bestAcc = s.accuracy;
+    chars += s.charsTyped || 0;
+  }
+  p.bestWpm = bestWpm;
+  p.bestAccuracy = bestAcc;
+  p.totalCharsTyped = chars;
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem("typing-trainer-progress", JSON.stringify(p));
+  }
+  return p;
+}
 
 export function mergeProgress(local: ProgressData, remote: ProgressData): ProgressData {
   return {

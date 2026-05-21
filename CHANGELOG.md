@@ -4,6 +4,13 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-05-21
+
+### Added
+- Session deletion UI on the stats page: trash icon on each session row (visible on hover/focus), optimistic removal with 5-second undo toast, hard-delete from Blob + localStorage after undo window expires.
+- UndoToast component: reusable countdown toast with Undo button, keyboard-operable, screen-reader announced.
+- Stats recalculation after deletion: bestWpm, bestAccuracy, totalSessions, totalCharsTyped recomputed from remaining sessions.
+
 ## [1.3.0] — 2026-05-21
 
 ### Added
