@@ -324,6 +324,14 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       setLiveWpm(Math.round((chars / 5) / (duration / 60000)));
       setElapsed(duration);
     }
+    // Live accuracy from spell-check results received so far
+    if (spellResults.size > 0) {
+      let correct = 0;
+      for (const r of spellResults.values()) { if (r.correct) correct++; }
+      setLiveAccuracy(Math.round((correct / spellResults.size) * 100));
+    } else {
+      setLiveAccuracy(100);
+    }
   }, []);
 
   const handleZenComplete = useCallback((keyStrokes: KeyStroke[], text: string, spellResults: Map<number, SpellCheckResult>) => {
@@ -482,24 +490,32 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       )}
 
       <div className="relative w-full px-6 sm:px-10 py-8 space-y-10">
-        <ModeSelector
-          mode={mode}
-          drillLevel={drillLevel}
-          passageDifficulty={passageDifficulty}
-          passageCategory={passageCategory}
-          unlockedDrillLevels={unlockedDrillLevels}
-          unlockedDifficulties={unlockedDifficulties}
-          drillProgress={drillProgress}
-          difficultyProgress={difficultyProgress}
-          unlockThreshold={UNLOCK_SESSIONS_REQUIRED}
-          zenAvailable={zenAvailable}
-          zenTopic={zenTopic || undefined}
-          onModeChange={(m) => { setMode(m); handleNext(); }}
-          onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
-          onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
-          onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
-          onNewZenTopic={handleNewZenTopic}
-        />
+        <div className="flex items-start justify-between gap-4">
+          <ModeSelector
+            mode={mode}
+            drillLevel={drillLevel}
+            passageDifficulty={passageDifficulty}
+            passageCategory={passageCategory}
+            unlockedDrillLevels={unlockedDrillLevels}
+            unlockedDifficulties={unlockedDifficulties}
+            drillProgress={drillProgress}
+            difficultyProgress={difficultyProgress}
+            unlockThreshold={UNLOCK_SESSIONS_REQUIRED}
+            zenAvailable={zenAvailable}
+            zenTopic={zenTopic || undefined}
+            onModeChange={(m) => { setMode(m); handleNext(); }}
+            onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
+            onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
+            onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
+            onNewZenTopic={handleNewZenTopic}
+          />
+
+          {mode === "zen" && (isActive || sessionStats) && (
+            <div className="animate-fade-in">
+              <ZenInlineStats wpm={sessionStats?.wpm ?? liveWpm} accuracy={sessionStats?.accuracy ?? liveAccuracy} elapsed={sessionStats ? Math.round(sessionStats.duration / 1000) : Math.round(elapsed / 1000)} isActive={isActive} />
+            </div>
+          )}
+        </div>
 
         {mode !== "zen" && (
           <LevelProgress
@@ -512,7 +528,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
         {mode === "drill" && <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} targets={practiceTargets} />}
 
-        {(isActive || sessionStats) && (
+        {mode !== "zen" && (isActive || sessionStats) && (
           <StatsDisplay
             stats={sessionStats}
             liveWpm={liveWpm}
@@ -639,6 +655,24 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
     </div>
   );
 }
+
+const ZenInlineStats = memo(function ZenInlineStats({ wpm, accuracy, elapsed, isActive }: { wpm: number; accuracy: number; elapsed: number; isActive: boolean }) {
+  return (
+    <div className={`flex items-center gap-5 transition-opacity ${isActive ? "opacity-100" : "opacity-60"}`} aria-live="off">
+      <div className="text-right">
+        <span className="text-lg font-bold text-emerald-400">{wpm}</span>
+        <span className="text-xs text-neutral-500 ml-1">WPM</span>
+      </div>
+      <div className="text-right">
+        <span className={`text-lg font-bold ${accuracy >= 95 ? "text-emerald-400" : accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>{accuracy}%</span>
+        <span className="text-xs text-neutral-500 ml-1">Acc</span>
+      </div>
+      <div className="text-right">
+        <span className="text-lg font-bold text-neutral-400">{elapsed}s</span>
+      </div>
+    </div>
+  );
+});
 
 const AdaptiveTargetIndicator = memo(function AdaptiveTargetIndicator({ mode, drillLevel, targets: rawTargets }: { mode: TrainingMode; drillLevel: DrillLevel; targets: PracticeTargets | undefined }) {
   if (mode !== "drill" || !rawTargets) return null;

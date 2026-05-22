@@ -55,7 +55,11 @@ export async function POST(req: NextRequest) {
 
     clearTimeout(timeout);
 
-    const text = message.content[0]?.type === "text" ? message.content[0].text.trim() : "[]";
+    let text = message.content[0]?.type === "text" ? message.content[0].text.trim() : "[]";
+
+    // Strip markdown code fences — Haiku sometimes wraps JSON in ```json...```
+    const fenceMatch = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+    if (fenceMatch) text = fenceMatch[1].trim();
 
     try {
       const results = JSON.parse(text);
