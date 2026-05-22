@@ -82,5 +82,5 @@ Spec-kit feature directories live under `specs/NNN-feature-name/`. The `dev` bra
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at `specs/011-zen-mode/plan.md`
+at `specs/012-xp-level-badges/plan.md`
 <!-- SPECKIT END -->
