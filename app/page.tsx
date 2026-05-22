@@ -119,14 +119,18 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const currentText = currentPassage.text;
 
   /* eslint-disable react-hooks/set-state-in-effect */
+  // Fetch zen topic on first zen mode entry
+  const zenTopicFetchedRef = useRef(false);
   useEffect(() => {
-    if (mode === "zen") {
-      if (!zenTopic && !zenTopicLoading) {
-        setZenTopicLoading(true);
-        fetchZenTopic().then((t) => { setZenTopic(t); setZenTopicLoading(false); });
-      }
-      return;
+    if (mode === "zen" && !zenTopic && !zenTopicLoading && !zenTopicFetchedRef.current) {
+      zenTopicFetchedRef.current = true;
+      setZenTopicLoading(true);
+      fetchZenTopic().then((t) => { setZenTopic(t); setZenTopicLoading(false); });
     }
+  }, [mode, zenTopic, zenTopicLoading]);
+
+  useEffect(() => {
+    if (mode === "zen") return;
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
       setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels, practiceTargets), source: "" });
@@ -135,7 +139,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       const passage = getRandomPassage(passageDifficulty, cat);
       setCurrentPassage({ text: passage.text, source: passage.source });
     }
-  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets, zenTopic, zenTopicLoading]);
+  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchTip = useCallback(async (keyStrokes: KeyStroke[], text: string) => {
@@ -307,9 +311,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   }, []);
 
   const handleFetchZenTopic = useCallback(async () => {
+    zenTopicFetchedRef.current = true;
     setZenTopicLoading(true);
     setZenText("");
     setZenWordCount(0);
+    setZenSpellResults(new Map());
     const topic = await fetchZenTopic();
     setZenTopic(topic);
     setZenTopicLoading(false);

@@ -204,7 +204,8 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
           onChange={handleInput}
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
-          className="absolute inset-0 w-full h-full p-8 sm:p-12 text-transparent caret-[#00ff88] bg-transparent resize-none outline-none text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide font-[family-name:var(--font-typing)] z-10"
+          className="absolute inset-0 w-full h-full p-8 sm:p-12 text-transparent caret-[#00ff88] bg-transparent resize-none outline-none text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap break-words overflow-wrap-break-word font-[family-name:var(--font-typing)] z-10"
+          style={{ overflowWrap: "break-word", wordBreak: "break-word" }}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
