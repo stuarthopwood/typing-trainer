@@ -100,3 +100,23 @@ export interface ActiveKeyState {
   correct: boolean | null;
   timestamp: number;
 }
+
+export interface BadgeIconLayer {
+  icon: string;
+  transform?: string;
+  color?: string;
+  opacity?: number;
+}
+
+export interface BadgeDefinition {
+  id: string;
+  name: string;
+  subtitle: string;
+  level: number;
+  layers: BadgeIconLayer[];
+}
+
+export interface BadgeProgress {
+  id: string;
+  unlockedAt: string;
+}

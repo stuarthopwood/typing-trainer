@@ -1,4 +1,6 @@
-import type { SessionStats, EnrichedSessionSummary, SessionTimingMetadata, PracticeTargets } from "./types";
+import type { SessionStats, EnrichedSessionSummary, SessionTimingMetadata, PracticeTargets, BadgeProgress } from "./types";
+import { migrateBadges } from "./badges";
+import { getLevelFromXp } from "./achievements";
 
 export interface ProgressData {
   totalSessions: number;
@@ -16,6 +18,7 @@ export interface ProgressData {
   tips: { text: string; explanation?: string; createdAt: string }[];
   practiceTargets?: PracticeTargets;
   drillLowAccuracyStreak?: Record<string, number>;
+  badges?: BadgeProgress[];
 }
 
 export interface SessionEnrichment {
@@ -41,6 +44,11 @@ export function getProgress(): ProgressData {
     if (!data.achievements) data.achievements = [];
     if (!data.tips) data.tips = [];
     if (!data.drillLowAccuracyStreak) data.drillLowAccuracyStreak = {};
+    if (!data.badges) {
+      const { level } = getLevelFromXp(data.xp || 0);
+      data.badges = migrateBadges(level);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
     return data;
   } catch {
     return defaultProgress();
