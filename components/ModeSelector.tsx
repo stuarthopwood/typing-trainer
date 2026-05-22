@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard, faBook, faLock } from "@fortawesome/free-solid-svg-icons";
+import { faKeyboard, faBook, faLock, faSpa, faRotate } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
 import GlowBorder from "./GlowBorder";
 
@@ -15,10 +15,14 @@ interface ModeSelectorProps {
   drillProgress: Record<string, number>;
   difficultyProgress: Record<string, number>;
   unlockThreshold: number;
+  zenAvailable: boolean;
+  zenTopic?: string;
+  zenTopicLoading?: boolean;
   onModeChange: (mode: TrainingMode) => void;
   onDrillLevelChange: (level: DrillLevel) => void;
   onDifficultyChange: (d: Passage["difficulty"]) => void;
   onCategoryChange: (c: Passage["category"] | "all") => void;
+  onNewZenTopic?: () => void;
 }
 
 const DIFFICULTIES: Passage["difficulty"][] = ["beginner", "intermediate", "advanced"];
@@ -33,10 +37,14 @@ export default function ModeSelector({
   drillProgress,
   difficultyProgress,
   unlockThreshold,
+  zenAvailable,
+  zenTopic,
+  zenTopicLoading,
   onModeChange,
   onDrillLevelChange,
   onDifficultyChange,
   onCategoryChange,
+  onNewZenTopic,
 }: ModeSelectorProps) {
   const difficultyIndex = DIFFICULTIES.indexOf(passageDifficulty);
 
@@ -82,7 +90,45 @@ export default function ModeSelector({
             <FontAwesomeIcon icon={faBook} className="w-5 h-5" />
           </button>
         </GlowBorder>
+        {zenAvailable && (
+          <GlowBorder radius="0.5rem" intensity="subtle">
+            <button
+              onClick={() => onModeChange("zen")}
+              className={`p-3 rounded-lg transition-all ${
+                mode === "zen"
+                  ? "text-[#00ff88] bg-[#00ff88]/10"
+                  : "text-neutral-300 hover:text-white"
+              }`}
+              aria-pressed={mode === "zen"}
+              aria-label="Zen mode — free typing"
+            >
+              <FontAwesomeIcon icon={faSpa} className="w-5 h-5" />
+            </button>
+          </GlowBorder>
+        )}
       </div>
+
+      {mode === "zen" && (
+        <div className="flex items-center gap-3">
+          {zenTopicLoading ? (
+            <p className="text-sm text-neutral-400 italic animate-pulse">Generating topic...</p>
+          ) : zenTopic ? (
+            <p id="zen-topic-prompt" className="text-sm text-neutral-200 italic">&ldquo;{zenTopic}&rdquo;</p>
+          ) : null}
+          {!zenTopicLoading && (
+            <GlowBorder radius="0.375rem" intensity="subtle">
+              <button
+                onClick={onNewZenTopic}
+                className="px-3 py-1.5 text-sm rounded-md transition-all text-neutral-300 hover:text-white flex items-center gap-1.5"
+                aria-label="Generate a new topic (cancels current session)"
+              >
+                <FontAwesomeIcon icon={faRotate} className="w-3 h-3" />
+                New Topic
+              </button>
+            </GlowBorder>
+          )}
+        </div>
+      )}
 
       {/* Difficulty — only meaningful in passage mode */}
       {mode === "passage" && (() => {
@@ -95,6 +141,7 @@ export default function ModeSelector({
               disabled={!canCycle}
               className={`flex items-end gap-0.5 p-3 rounded-lg transition-all ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
               title={canCycle ? `Difficulty: ${passageDifficulty} (click to cycle unlocked levels)` : `Difficulty: ${passageDifficulty} (unlock more by completing sessions at 85%+ accuracy)`}
+              aria-label={`Difficulty level: ${passageDifficulty}${canCycle ? " — click to cycle" : " — locked"}`}
             >
               <span
                 className={`w-2 rounded-sm transition-colors ${
@@ -156,7 +203,7 @@ export default function ModeSelector({
       )}
 
       {mode === "passage" && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Passage category filter">
           {(["all", "book", "movie", "code", "quote"] as (Passage["category"] | "all")[]).map((c) => (
             <GlowBorder key={c} radius="0.375rem" intensity="subtle">
               <button

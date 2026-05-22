@@ -158,7 +158,7 @@ export default memo(function TypingArea({ text, onComplete, onProgress, onKeyPre
         className={`p-8 sm:p-12 transition-all duration-300 ${getGlowClass(celebration)} ${shakeError ? "animate-[shake_0.3s_ease-in-out]" : ""}`}
       >
         <p
-          className="text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap select-none text-center font-[family-name:var(--font-inter)] flex items-center justify-center"
+          className="text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap select-none text-center font-[family-name:var(--font-typing)] flex items-center justify-center"
           style={{ minHeight: "calc(1.8em * 3)" }}
         >
           <span>
