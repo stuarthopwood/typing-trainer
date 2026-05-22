@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { timingSafeEqual } from "crypto";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 function isAuthorized(req: NextRequest): boolean {
   const key = req.headers.get("x-api-key");
@@ -13,6 +14,12 @@ function isAuthorized(req: NextRequest): boolean {
 export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const pin = req.headers.get("x-user-pin") || "anonymous";
+  const { allowed, remaining, resetIn } = checkRateLimit(pin);
+  if (!allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429, headers: { "Retry-After": String(Math.ceil(resetIn / 1000)), "X-RateLimit-Remaining": "0" } });
   }
 
   try {
