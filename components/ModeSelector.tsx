@@ -130,6 +130,7 @@ export default function ModeSelector({
               disabled={!canCycle}
               className={`flex items-end gap-0.5 p-3 rounded-lg transition-all ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
               title={canCycle ? `Difficulty: ${passageDifficulty} (click to cycle unlocked levels)` : `Difficulty: ${passageDifficulty} (unlock more by completing sessions at 85%+ accuracy)`}
+              aria-label={`Difficulty level: ${passageDifficulty}${canCycle ? " — click to cycle" : " — locked"}`}
             >
               <span
                 className={`w-2 rounded-sm transition-colors ${
