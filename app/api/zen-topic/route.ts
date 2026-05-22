@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       max_tokens: 60,
       messages: [{
         role: "user",
-        content: "Generate a single open-ended question or prompt for a free-typing exercise. It should be 5-10 words, conversational, and easy to write about. Examples: 'Describe your favourite meal to cook', 'What would you do with a free afternoon?'. Return ONLY the prompt text, nothing else.",
+        content: "Generate a single open-ended question or prompt for a free-typing exercise. It should be 5-10 words, conversational, fun, and easy to write about. Focus on hobbies, pop culture, food, travel, animals, childhood memories, hypothetical scenarios, or fun facts — NOT skills, career, or self-improvement topics. Examples: 'What's the best pizza topping and why?', 'Describe your ideal lazy Sunday', 'If you could visit any fictional world, where?', 'What's a film you could watch on repeat?'. Return ONLY the prompt text, nothing else.",
       }],
     });
 

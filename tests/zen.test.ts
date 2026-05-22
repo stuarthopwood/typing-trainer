@@ -89,7 +89,7 @@ describe("Zen — checkSpelling", () => {
     expect(results).toEqual([]);
   });
 
-  it("should return empty array on timeout/failure", async () => {
+  it("should return fallback correct results on timeout/failure", async () => {
     // Given fetch throws (simulating abort)
     const fetchMock = vi.fn().mockRejectedValueOnce(new Error("AbortError"));
     vi.stubGlobal("fetch", fetchMock);
@@ -97,8 +97,10 @@ describe("Zen — checkSpelling", () => {
     // When checkSpelling is called
     const results = await checkSpelling(["hello"], "hello world");
 
-    // Then empty array returned gracefully
-    expect(results).toEqual([]);
+    // Then fallback results returned (marked correct, no penalty)
+    expect(results).toHaveLength(1);
+    expect(results[0].word).toBe("hello");
+    expect(results[0].correct).toBe(true);
   });
 });
 

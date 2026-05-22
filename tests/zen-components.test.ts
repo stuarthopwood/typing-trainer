@@ -132,8 +132,9 @@ describe("Zen Mode — US2: Real-Time Spell-Checking", () => {
     // When checkSpelling is called
     const results = await checkSpelling(["hello"], "hello world");
 
-    // Then empty results returned (words marked unchecked, not penalised)
-    expect(results).toEqual([]);
+    // Then fallback results returned (marked correct — no penalty on timeout)
+    expect(results).toHaveLength(1);
+    expect(results[0].correct).toBe(true);
   });
 
   it("should calculate accuracy from spell-check results (US2.6)", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard, faBook, faLock, faSpa } from "@fortawesome/free-solid-svg-icons";
+import { faKeyboard, faBook, faLock, faSpa, faRotate } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
 import GlowBorder from "./GlowBorder";
 
@@ -109,13 +109,16 @@ export default function ModeSelector({
       {mode === "zen" && zenTopic && (
         <div className="flex items-center gap-3">
           <p id="zen-topic-prompt" className="text-sm text-neutral-200 italic">&ldquo;{zenTopic}&rdquo;</p>
-          <button
-            onClick={onNewZenTopic}
-            className="px-3 py-1.5 text-xs text-neutral-300 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-md transition-colors"
-            aria-label="Generate a new topic (cancels current session)"
-          >
-            New Topic
-          </button>
+          <GlowBorder radius="0.375rem" intensity="subtle">
+            <button
+              onClick={onNewZenTopic}
+              className="px-3 py-1.5 text-sm rounded-md transition-all text-neutral-300 hover:text-white flex items-center gap-1.5"
+              aria-label="Generate a new topic (cancels current session)"
+            >
+              <FontAwesomeIcon icon={faRotate} className="w-3 h-3" />
+              New Topic
+            </button>
+          </GlowBorder>
         </div>
       )}
 

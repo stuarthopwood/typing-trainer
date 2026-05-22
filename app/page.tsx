@@ -460,11 +460,6 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
         </div>
       </header>
 
-      {position === 0 && !isActive && (
-        <div className="relative w-full px-6 sm:px-10 pt-3 flex justify-end">
-          <p className="text-sm text-slate-400 dark:text-slate-500">Start typing to begin...</p>
-        </div>
-      )}
 
       {demotionNotice && (
         <div className="relative w-full px-6 sm:px-10 pt-3" role="status" aria-live="polite">
@@ -599,12 +594,22 @@ const XpBar = memo(function XpBar({ xp }: { xp: number }) {
   const pct = Math.min(100, Math.round((currentXp / nextLevelXp) * 100));
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 group/xp relative">
       <span className="text-xs font-bold text-[#00ff88]">Lv.{level}</span>
       <div className="w-20 h-1.5 bg-neutral-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={currentXp} aria-valuemax={nextLevelXp} aria-label={`Level ${level} progress: ${pct}%`}>
         <div className="h-full bg-[#00ff88]/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-neutral-400">{xp} XP</span>
+      <span className="text-neutral-500 hover:text-neutral-300 cursor-help text-xs" aria-label="How XP works">
+        &#9432;
+        <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 p-3 text-xs text-neutral-200 bg-neutral-900 border border-neutral-700 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.5)] opacity-0 group-hover/xp:opacity-100 pointer-events-none transition-opacity z-50 leading-relaxed">
+          <strong className="text-[#00ff88]">XP System</strong><br />
+          +5 per session<br />
+          +3 bonus at 85%+ accuracy<br />
+          +5 bonus at 95%+ accuracy<br />
+          Achievements award extra XP
+        </span>
+      </span>
     </div>
   );
 });

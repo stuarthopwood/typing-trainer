@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback, useMemo, memo } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import type { KeyStroke } from "@/lib/types";
 import { extractWords, checkSpelling, type SpellCheckResult } from "@/lib/zen";
 
@@ -193,7 +195,7 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
           aria-describedby="zen-topic-prompt"
         />
         <div
-          className="p-8 sm:p-12 text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap break-words select-none font-[family-name:var(--font-inter)] text-neutral-100 pointer-events-none"
+          className="p-8 sm:p-12 text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap break-words select-none font-[family-name:var(--font-inter)] text-[#00ff88]/90 pointer-events-none"
           aria-hidden="true"
           style={{ minHeight: "calc(1.8em * 3)" }}
         >
@@ -201,16 +203,17 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-center gap-3">
         <span className="text-xs text-neutral-400">
-          {wordCount} word{wordCount !== 1 ? "s" : ""}{wordCount < 20 ? ` (${20 - wordCount} more to finish)` : ""}
+          {wordCount} word{wordCount !== 1 ? "s" : ""}{wordCount < 20 ? ` — ${20 - wordCount} more to finish` : ""}
         </span>
         <button
           onClick={handleDone}
           disabled={wordCount < 20}
-          className="px-6 py-2.5 text-sm font-semibold text-black bg-[#00ff88] rounded-lg hover:bg-[#00cc6a] active:bg-[#009e54] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="px-8 py-3 text-base font-semibold text-black bg-[#00ff88] rounded-xl hover:bg-[#00cc6a] active:bg-[#009e54] transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(0,255,136,0.3)] hover:shadow-[0_0_20px_rgba(0,255,136,0.5)] flex items-center gap-2"
           aria-label={wordCount < 20 ? `Finish typing (${20 - wordCount} more words needed)` : "Finish typing and submit"}
         >
+          <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
           Done
         </button>
       </div>

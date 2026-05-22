@@ -19,7 +19,7 @@ export default memo(function ZenResponsePanel({ text, spellResults }: ZenRespons
 
   if (!text) {
     return (
-      <div className="h-64 rounded-xl bg-[#141414] border border-neutral-800/50 flex items-center justify-center">
+      <div className="h-64 rounded-xl flex items-center justify-center">
         <p className="text-sm text-neutral-500 italic">Your response will appear here...</p>
       </div>
     );
@@ -54,7 +54,7 @@ export default memo(function ZenResponsePanel({ text, spellResults }: ZenRespons
       ref={containerRef}
       role="region"
       aria-label="Your complete typed response"
-      className="h-64 rounded-xl bg-[#141414] border border-neutral-800/50 p-5 overflow-y-auto text-sm text-neutral-300 leading-relaxed whitespace-pre-wrap break-words font-[family-name:var(--font-inter)]"
+      className="h-64 rounded-xl p-5 overflow-y-auto text-sm text-[#00ff88]/70 leading-relaxed whitespace-pre-wrap break-words font-[family-name:var(--font-inter)]"
     >
       {parts}
     </div>

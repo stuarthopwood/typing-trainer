@@ -28,25 +28,37 @@ export async function checkSpelling(words: string[], context: string): Promise<S
   const apiKey = process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
   if (!apiKey || words.length === 0) return [];
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
+  const allResults: SpellCheckResult[] = [];
 
-    const res = await fetch("/api/zen-spellcheck", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-      body: JSON.stringify({ words, context }),
-      signal: controller.signal,
-    });
+  for (let i = 0; i < words.length; i += 5) {
+    const batch = words.slice(i, i + 5);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
 
-    clearTimeout(timeout);
-    if (!res.ok) return [];
+      const res = await fetch("/api/zen-spellcheck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+        body: JSON.stringify({ words: batch, context }),
+        signal: controller.signal,
+      });
 
-    const data = await res.json();
-    return Array.isArray(data.results) ? data.results : [];
-  } catch {
-    return [];
+      clearTimeout(timeout);
+      if (!res.ok) {
+        allResults.push(...batch.map((w, idx) => ({ word: w, correct: true, suggestion: null, index: i + idx })));
+        continue;
+      }
+
+      const data = await res.json();
+      if (Array.isArray(data.results)) {
+        allResults.push(...data.results.map((r: SpellCheckResult, idx: number) => ({ ...r, index: i + idx })));
+      }
+    } catch {
+      allResults.push(...batch.map((w, idx) => ({ word: w, correct: true, suggestion: null, index: i + idx })));
+    }
   }
+
+  return allResults;
 }
 
 export function buildZenSessionStats(
