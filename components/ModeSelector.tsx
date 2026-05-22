@@ -191,7 +191,7 @@ export default function ModeSelector({
       )}
 
       {mode === "passage" && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Passage category filter">
           {(["all", "book", "movie", "code", "quote"] as (Passage["category"] | "all")[]).map((c) => (
             <GlowBorder key={c} radius="0.375rem" intensity="subtle">
               <button

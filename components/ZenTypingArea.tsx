@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback, memo } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo, memo } from "react";
 import type { KeyStroke } from "@/lib/types";
 import { extractWords, checkSpelling, type SpellCheckResult } from "@/lib/zen";
 
@@ -12,21 +12,23 @@ interface ZenTypingAreaProps {
 
 export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: ZenTypingAreaProps) {
   const [text, setText] = useState("");
-  const [wordCount, setWordCount] = useState(0);
+  const [spellVersion, setSpellVersion] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const keyStrokesRef = useRef<KeyStroke[]>([]);
   const spellResultsRef = useRef<Map<number, SpellCheckResult>>(new Map());
-  const uncheckedStartRef = useRef(0);
   const debounceTimerRef = useRef<NodeJS.Timeout>(undefined);
   const pendingCheckRef = useRef(false);
-  const [, forceRender] = useState(0);
+  const checkedIndicesRef = useRef<Set<number>>(new Set());
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
+
+  const wordCount = useMemo(() => extractWords(text).length, [text]);
 
   const fireSpellCheck = useCallback(async (currentText: string) => {
     if (pendingCheckRef.current) return;
 
     const allWords = extractWords(currentText);
-    const checked = spellResultsRef.current;
-    const unchecked = allWords.filter((w) => !checked.has(w.startIndex));
+    const unchecked = allWords.filter((w) => !checkedIndicesRef.current.has(w.startIndex));
     if (unchecked.length === 0) return;
 
     pendingCheckRef.current = true;
@@ -39,39 +41,44 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
     const results = await checkSpelling(words, context);
     pendingCheckRef.current = false;
 
-    if (results.length > 0) {
-      results.forEach((r, i) => {
-        if (batch[i]) spellResultsRef.current.set(batch[i].startIndex, r);
-      });
-      forceRender((n) => n + 1);
+    for (let i = 0; i < batch.length; i++) {
+      checkedIndicesRef.current.add(batch[i].startIndex);
+      if (results[i]) {
+        spellResultsRef.current.set(batch[i].startIndex, results[i]);
+      }
     }
 
-    const remainingUnchecked = extractWords(currentText).filter((w) => !spellResultsRef.current.has(w.startIndex));
-    if (remainingUnchecked.length >= 5) {
-      fireSpellCheck(currentText);
-    }
+    setSpellVersion((n) => n + 1);
   }, []);
 
   const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setText(newText);
 
-    const wc = extractWords(newText).length;
-    setWordCount(wc);
-
     clearTimeout(debounceTimerRef.current);
 
-    const unchecked = extractWords(newText).filter((w) => !spellResultsRef.current.has(w.startIndex));
-    if (unchecked.length >= 5) {
+    const allWords = extractWords(newText);
+    const uncheckedCount = allWords.filter((w) => !checkedIndicesRef.current.has(w.startIndex)).length;
+
+    if (uncheckedCount >= 5) {
       fireSpellCheck(newText);
-    } else {
+    } else if (uncheckedCount > 0) {
       debounceTimerRef.current = setTimeout(() => {
         fireSpellCheck(newText);
       }, 1500);
     }
+  }, [fireSpellCheck]);
 
-    onProgress(wc, keyStrokesRef.current, newText, spellResultsRef.current);
-  }, [fireSpellCheck, onProgress]);
+  // Throttled progress reporting — every 500ms, not every keystroke
+  const progressIntervalRef = useRef<NodeJS.Timeout>(undefined);
+  useEffect(() => {
+    if (text.length === 0) return;
+    clearTimeout(progressIntervalRef.current);
+    progressIntervalRef.current = setTimeout(() => {
+      onProgressRef.current(wordCount, keyStrokesRef.current, text, new Map(spellResultsRef.current));
+    }, 500);
+    return () => clearTimeout(progressIntervalRef.current);
+  }, [text, wordCount, spellVersion]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta" || e.key === "CapsLock") return;
@@ -103,34 +110,37 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
 
   const handleDone = useCallback(async () => {
     clearTimeout(debounceTimerRef.current);
+    clearTimeout(progressIntervalRef.current);
 
-    const currentText = textareaRef.current?.value || text;
-    const unchecked = extractWords(currentText).filter((w) => !spellResultsRef.current.has(w.startIndex));
+    const currentText = textareaRef.current?.value || "";
+    const allWords = extractWords(currentText);
+    const unchecked = allWords.filter((w) => !checkedIndicesRef.current.has(w.startIndex));
 
     if (unchecked.length > 0) {
       const words = unchecked.map((w) => w.word);
-      const context = currentText;
-      const results = await checkSpelling(words, context.slice(0, 500));
-      if (results.length > 0) {
-        results.forEach((r, i) => {
-          if (unchecked[i]) spellResultsRef.current.set(unchecked[i].startIndex, r);
-        });
+      const context = currentText.slice(0, 500);
+      const results = await checkSpelling(words, context);
+      for (let i = 0; i < unchecked.length; i++) {
+        checkedIndicesRef.current.add(unchecked[i].startIndex);
+        if (results[i]) {
+          spellResultsRef.current.set(unchecked[i].startIndex, results[i]);
+        }
       }
     }
 
-    onComplete(keyStrokesRef.current, currentText, spellResultsRef.current);
-  }, [text, onComplete]);
+    onComplete(keyStrokesRef.current, currentText, new Map(spellResultsRef.current));
+  }, [onComplete]);
 
   useEffect(() => {
     setText("");
-    setWordCount(0);
     keyStrokesRef.current = [];
     spellResultsRef.current = new Map();
-    uncheckedStartRef.current = 0;
+    checkedIndicesRef.current = new Set();
+    setSpellVersion(0);
     textareaRef.current?.focus();
   }, [topic]);
 
-  const renderOverlay = () => {
+  const overlayContent = useMemo(() => {
     if (!text) return <span className="text-neutral-500 italic">Start typing...</span>;
 
     const words = extractWords(text);
@@ -146,10 +156,11 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
       parts.push(
         <span
           key={`w-${w.startIndex}`}
-          className={isMisspelled ? "underline decoration-red-500 decoration-2 underline-offset-4" : ""}
+          className={isMisspelled ? "underline decoration-wavy decoration-red-500 decoration-2 underline-offset-4" : ""}
           title={isMisspelled && result.suggestion ? `Did you mean: ${result.suggestion}` : undefined}
         >
           {text.slice(w.startIndex, w.endIndex)}
+          {isMisspelled && <span className="text-red-400 text-sm align-super ml-0.5" aria-hidden="true">*</span>}
         </span>
       );
       lastEnd = w.endIndex;
@@ -158,11 +169,12 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
       parts.push(<span key={`ws-${lastEnd}`}>{text.slice(lastEnd)}</span>);
     }
     return parts;
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, spellVersion]);
 
   return (
     <div className="space-y-4">
-      <div className="relative min-h-[12rem] rounded-xl">
+      <div className="relative min-h-[12rem]">
         <textarea
           ref={textareaRef}
           value={text}
@@ -181,11 +193,11 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
           aria-describedby="zen-topic-prompt"
         />
         <div
-          className="p-8 sm:p-12 text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap break-words select-none text-center font-[family-name:var(--font-inter)] text-neutral-100 pointer-events-none"
+          className="p-8 sm:p-12 text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap break-words select-none font-[family-name:var(--font-inter)] text-neutral-100 pointer-events-none"
           aria-hidden="true"
           style={{ minHeight: "calc(1.8em * 3)" }}
         >
-          {renderOverlay()}
+          {overlayContent}
         </div>
       </div>
 
@@ -197,6 +209,7 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
           onClick={handleDone}
           disabled={wordCount < 20}
           className="px-6 py-2.5 text-sm font-semibold text-black bg-[#00ff88] rounded-lg hover:bg-[#00cc6a] active:bg-[#009e54] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          aria-label={wordCount < 20 ? `Finish typing (${20 - wordCount} more words needed)` : "Finish typing and submit"}
         >
           Done
         </button>
