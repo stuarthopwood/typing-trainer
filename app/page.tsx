@@ -313,8 +313,10 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     setZenTopicLoading(false);
   }, []);
 
-  const handleZenProgress = useCallback((wc: number, keyStrokes: KeyStroke[]) => {
+  const handleZenProgress = useCallback((wc: number, keyStrokes: KeyStroke[], text: string, spellResults: Map<number, SpellCheckResult>) => {
     setZenWordCount(wc);
+    setZenText(text);
+    setZenSpellResults(spellResults);
     setIsActive(true);
     if (keyStrokes.length >= 2) {
       const duration = keyStrokes[keyStrokes.length - 1].timestamp - keyStrokes[0].timestamp;
