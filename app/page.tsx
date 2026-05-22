@@ -6,7 +6,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
 import GlowBorder from "@/components/GlowBorder";
-import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
 import VisualKeyboard from "@/components/VisualKeyboard";
 import { buildSessionStats, calculateWpm, calculateAccuracy } from "@/lib/engine";
@@ -510,9 +509,15 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             onNewZenTopic={handleNewZenTopic}
           />
 
-          {mode === "zen" && (isActive || sessionStats) && (
+          {(isActive || sessionStats) && (
             <div className="animate-fade-in">
-              <ZenInlineStats wpm={sessionStats?.wpm ?? liveWpm} accuracy={sessionStats?.accuracy ?? liveAccuracy} elapsed={sessionStats ? Math.round(sessionStats.duration / 1000) : Math.round(elapsed / 1000)} isActive={isActive} />
+              <InlineStats
+                wpm={sessionStats?.wpm ?? liveWpm}
+                accuracy={sessionStats?.accuracy ?? liveAccuracy}
+                elapsed={sessionStats ? Math.round(sessionStats.duration / 1000) : Math.round(elapsed / 1000)}
+                combo={mode !== "zen" ? combo : 0}
+                isActive={isActive}
+              />
             </div>
           )}
         </div>
@@ -527,21 +532,6 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
         )}
 
         {mode === "drill" && <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} targets={practiceTargets} />}
-
-        {mode !== "zen" && (isActive || sessionStats) && (
-          <StatsDisplay
-            stats={sessionStats}
-            liveWpm={liveWpm}
-            liveAccuracy={liveAccuracy}
-            isActive={isActive}
-            elapsed={elapsed}
-            combo={combo}
-            sessionAvgWpm={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.wpm, 0) / sessionResults.length) : undefined}
-            sessionAvgAccuracy={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.accuracy, 0) / sessionResults.length) : undefined}
-            allTimeBestWpm={sessionStats ? bestWpm : undefined}
-            allTimeBestAccuracy={sessionStats ? bestAccuracy : undefined}
-          />
-        )}
 
         <div className="relative">
           <TipBox tip={currentTip} loading={tipLoading} />
@@ -656,7 +646,7 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
   );
 }
 
-const ZenInlineStats = memo(function ZenInlineStats({ wpm, accuracy, elapsed, isActive }: { wpm: number; accuracy: number; elapsed: number; isActive: boolean }) {
+const InlineStats = memo(function InlineStats({ wpm, accuracy, elapsed, combo, isActive }: { wpm: number; accuracy: number; elapsed: number; combo: number; isActive: boolean }) {
   return (
     <div className={`flex items-center gap-5 transition-opacity ${isActive ? "opacity-100" : "opacity-60"}`} aria-live="off">
       <div className="text-right">
@@ -670,6 +660,12 @@ const ZenInlineStats = memo(function ZenInlineStats({ wpm, accuracy, elapsed, is
       <div className="text-right">
         <span className="text-lg font-bold text-neutral-400">{elapsed}s</span>
       </div>
+      {combo > 2 && (
+        <div className="text-right">
+          <span className="text-lg font-bold text-orange-400">{combo}</span>
+          <span className="text-xs text-neutral-500 ml-1">Combo</span>
+        </div>
+      )}
     </div>
   );
 });
