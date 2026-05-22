@@ -17,6 +17,7 @@ interface ModeSelectorProps {
   unlockThreshold: number;
   zenAvailable: boolean;
   zenTopic?: string;
+  zenTopicLoading?: boolean;
   onModeChange: (mode: TrainingMode) => void;
   onDrillLevelChange: (level: DrillLevel) => void;
   onDifficultyChange: (d: Passage["difficulty"]) => void;
@@ -38,6 +39,7 @@ export default function ModeSelector({
   unlockThreshold,
   zenAvailable,
   zenTopic,
+  zenTopicLoading,
   onModeChange,
   onDrillLevelChange,
   onDifficultyChange,
@@ -106,19 +108,25 @@ export default function ModeSelector({
         )}
       </div>
 
-      {mode === "zen" && zenTopic && (
+      {mode === "zen" && (
         <div className="flex items-center gap-3">
-          <p id="zen-topic-prompt" className="text-sm text-neutral-200 italic">&ldquo;{zenTopic}&rdquo;</p>
-          <GlowBorder radius="0.375rem" intensity="subtle">
-            <button
-              onClick={onNewZenTopic}
-              className="px-3 py-1.5 text-sm rounded-md transition-all text-neutral-300 hover:text-white flex items-center gap-1.5"
-              aria-label="Generate a new topic (cancels current session)"
-            >
-              <FontAwesomeIcon icon={faRotate} className="w-3 h-3" />
-              New Topic
-            </button>
-          </GlowBorder>
+          {zenTopicLoading ? (
+            <p className="text-sm text-neutral-400 italic animate-pulse">Generating topic...</p>
+          ) : zenTopic ? (
+            <p id="zen-topic-prompt" className="text-sm text-neutral-200 italic">&ldquo;{zenTopic}&rdquo;</p>
+          ) : null}
+          {!zenTopicLoading && (
+            <GlowBorder radius="0.375rem" intensity="subtle">
+              <button
+                onClick={onNewZenTopic}
+                className="px-3 py-1.5 text-sm rounded-md transition-all text-neutral-300 hover:text-white flex items-center gap-1.5"
+                aria-label="Generate a new topic (cancels current session)"
+              >
+                <FontAwesomeIcon icon={faRotate} className="w-3 h-3" />
+                New Topic
+              </button>
+            </GlowBorder>
+          )}
         </div>
       )}
 

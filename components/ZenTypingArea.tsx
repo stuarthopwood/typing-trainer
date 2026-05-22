@@ -15,6 +15,7 @@ interface ZenTypingAreaProps {
 export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: ZenTypingAreaProps) {
   const [text, setText] = useState("");
   const [spellVersion, setSpellVersion] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const keyStrokesRef = useRef<KeyStroke[]>([]);
   const spellResultsRef = useRef<Map<number, SpellCheckResult>>(new Map());
@@ -53,14 +54,26 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
     setSpellVersion((n) => n + 1);
   }, []);
 
+  const prevWordsRef = useRef<Map<number, string>>(new Map());
+
   const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setText(newText);
 
     clearTimeout(debounceTimerRef.current);
 
-    const allWords = extractWords(newText);
-    const uncheckedCount = allWords.filter((w) => !checkedIndicesRef.current.has(w.startIndex)).length;
+    // Invalidate spell results for words whose content changed (user corrected a typo)
+    const newWords = extractWords(newText);
+    for (const w of newWords) {
+      const prev = prevWordsRef.current.get(w.startIndex);
+      if (prev !== undefined && prev !== w.word) {
+        checkedIndicesRef.current.delete(w.startIndex);
+        spellResultsRef.current.delete(w.startIndex);
+      }
+    }
+    prevWordsRef.current = new Map(newWords.map((w) => [w.startIndex, w.word]));
+
+    const uncheckedCount = newWords.filter((w) => !checkedIndicesRef.current.has(w.startIndex)).length;
 
     if (uncheckedCount >= 5) {
       fireSpellCheck(newText);
@@ -110,34 +123,42 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
     }
   }, []);
 
-  const handleDone = useCallback(async () => {
+  const handleDone = useCallback(() => {
+    setSubmitting(true);
     clearTimeout(debounceTimerRef.current);
     clearTimeout(progressIntervalRef.current);
 
-    const currentText = textareaRef.current?.value || "";
-    const allWords = extractWords(currentText);
-    const unchecked = allWords.filter((w) => !checkedIndicesRef.current.has(w.startIndex));
+    // Yield to browser for paint (button disable renders) before async work
+    requestAnimationFrame(() => {
+      setTimeout(async () => {
+        const currentText = textareaRef.current?.value || "";
+        const allWords = extractWords(currentText);
+        const unchecked = allWords.filter((w) => !checkedIndicesRef.current.has(w.startIndex));
 
-    if (unchecked.length > 0) {
-      const words = unchecked.map((w) => w.word);
-      const context = currentText.slice(0, 500);
-      const results = await checkSpelling(words, context);
-      for (let i = 0; i < unchecked.length; i++) {
-        checkedIndicesRef.current.add(unchecked[i].startIndex);
-        if (results[i]) {
-          spellResultsRef.current.set(unchecked[i].startIndex, results[i]);
+        if (unchecked.length > 0) {
+          const words = unchecked.map((w) => w.word);
+          const context = currentText.slice(0, 500);
+          const results = await checkSpelling(words, context);
+          for (let i = 0; i < unchecked.length; i++) {
+            checkedIndicesRef.current.add(unchecked[i].startIndex);
+            if (results[i]) {
+              spellResultsRef.current.set(unchecked[i].startIndex, results[i]);
+            }
+          }
         }
-      }
-    }
 
-    onComplete(keyStrokesRef.current, currentText, new Map(spellResultsRef.current));
+        onComplete(keyStrokesRef.current, currentText, new Map(spellResultsRef.current));
+      }, 0);
+    });
   }, [onComplete]);
 
   useEffect(() => {
     setText("");
+    setSubmitting(false);
     keyStrokesRef.current = [];
     spellResultsRef.current = new Map();
     checkedIndicesRef.current = new Set();
+    prevWordsRef.current = new Map();
     setSpellVersion(0);
     textareaRef.current?.focus();
   }, [topic]);
@@ -183,7 +204,7 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
           onChange={handleInput}
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
-          className="absolute inset-0 w-full h-full p-8 sm:p-12 text-transparent caret-[#00ff88] bg-transparent resize-none outline-none text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide font-[family-name:var(--font-inter)] z-10"
+          className="absolute inset-0 w-full h-full p-8 sm:p-12 text-transparent caret-[#00ff88] bg-transparent resize-none outline-none text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide font-[family-name:var(--font-typing)] z-10"
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
@@ -195,7 +216,7 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
           aria-describedby="zen-topic-prompt"
         />
         <div
-          className="p-8 sm:p-12 text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap break-words select-none font-[family-name:var(--font-inter)] text-[#00ff88]/90 pointer-events-none"
+          className="p-8 sm:p-12 text-3xl sm:text-4xl md:text-5xl leading-[1.8] tracking-wide whitespace-pre-wrap break-words select-none font-[family-name:var(--font-typing)] text-[#00ff88]/90 pointer-events-none"
           aria-hidden="true"
           style={{ minHeight: "calc(1.8em * 3)" }}
         >
@@ -205,16 +226,16 @@ export default memo(function ZenTypingArea({ topic, onProgress, onComplete }: Ze
 
       <div className="flex flex-col items-center gap-3">
         <span className="text-xs text-neutral-400">
-          {wordCount} word{wordCount !== 1 ? "s" : ""}{wordCount < 20 ? ` — ${20 - wordCount} more to finish` : ""}
+          {wordCount} word{wordCount !== 1 ? "s" : ""}{wordCount < 20 ? ` — ${wordCount === 0 ? "20+ to finish" : `${20 - wordCount} more to finish`}` : ""}
         </span>
         <button
           onClick={handleDone}
-          disabled={wordCount < 20}
+          disabled={wordCount < 20 || submitting}
           className="px-8 py-3 text-base font-semibold text-black bg-[#00ff88] rounded-xl hover:bg-[#00cc6a] active:bg-[#009e54] transition-colors disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(0,255,136,0.3)] hover:shadow-[0_0_20px_rgba(0,255,136,0.5)] flex items-center gap-2"
-          aria-label={wordCount < 20 ? `Finish typing (${20 - wordCount} more words needed)` : "Finish typing and submit"}
+          aria-label={submitting ? "Checking spelling..." : wordCount < 20 ? `Finish typing (${20 - wordCount} more words needed)` : "Finish typing and submit"}
         >
           <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
-          Done
+          {submitting ? "Checking..." : "Done"}
         </button>
       </div>
     </div>

@@ -54,7 +54,7 @@ export default memo(function ZenResponsePanel({ text, spellResults }: ZenRespons
       ref={containerRef}
       role="region"
       aria-label="Your complete typed response"
-      className="h-64 rounded-xl p-5 overflow-y-auto text-sm text-[#00ff88]/70 leading-relaxed whitespace-pre-wrap break-words font-[family-name:var(--font-inter)]"
+      className="h-64 rounded-xl p-5 overflow-y-auto text-sm text-[#00ff88]/70 leading-relaxed whitespace-pre-wrap break-words font-[family-name:var(--font-typing)]"
     >
       {parts}
     </div>

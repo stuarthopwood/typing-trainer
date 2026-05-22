@@ -300,6 +300,9 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     setTextKey((k) => k + 1);
     setPosition(0);
     setCurrentTip(null);
+    setZenText("");
+    setZenSpellResults(new Map());
+    setZenWordCount(0);
     recentErrorsRef.current = [];
   }, []);
 
@@ -502,6 +505,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             unlockThreshold={UNLOCK_SESSIONS_REQUIRED}
             zenAvailable={zenAvailable}
             zenTopic={zenTopic || undefined}
+            zenTopicLoading={zenTopicLoading}
             onModeChange={(m) => { setMode(m); handleNext(); }}
             onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
             onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
@@ -536,20 +540,18 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
         <div className="relative">
           <TipBox tip={currentTip} loading={tipLoading} />
           {mode === "zen" ? (
-            zenTopicLoading ? (
-              <div className="flex items-center justify-center h-48 text-neutral-400 text-sm" role="status" aria-live="polite">Generating topic...</div>
-            ) : zenTopic ? (
+            zenTopic && !zenTopicLoading ? (
               <ZenTypingArea
                 topic={zenTopic}
                 onProgress={handleZenProgress}
                 onComplete={handleZenComplete}
               />
-            ) : (
+            ) : !zenTopicLoading ? (
               <div className="flex flex-col items-center justify-center h-48 gap-3" role="status" aria-live="polite">
                 <p className="text-sm text-neutral-400">Couldn&apos;t generate topic</p>
                 <button onClick={handleFetchZenTopic} className="px-4 py-2 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg transition-colors">Try again</button>
               </div>
-            )
+            ) : null
           ) : (
             <GlowBorder radius="1rem" intensity="punchy">
               <TypingArea
