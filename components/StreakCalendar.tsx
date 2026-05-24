@@ -33,7 +33,7 @@ export default memo(function StreakCalendar({ sessions }: StreakCalendarProps) {
   const handleMouseLeave = () => setTooltip(null);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-neutral-200">Activity</h2>
         <div className="flex items-center gap-6">
@@ -79,19 +79,22 @@ export default memo(function StreakCalendar({ sessions }: StreakCalendarProps) {
         </div>
       </div>
 
-      {tooltip?.day && (
-        <div
-          className="fixed z-50 px-3 py-2 text-xs text-neutral-200 bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg pointer-events-none -translate-x-1/2 -translate-y-full"
-          style={{ left: tooltip.x, top: tooltip.y }}
-        >
-          <p className="font-medium">{new Date(tooltip.day.date + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</p>
-          {tooltip.day.sessionCount > 0 ? (
-            <p className="text-neutral-400">{tooltip.day.sessionCount} session{tooltip.day.sessionCount !== 1 ? "s" : ""} ({tooltip.day.avgWpm} WPM avg)</p>
-          ) : (
-            <p className="text-neutral-500">No sessions</p>
-          )}
-        </div>
-      )}
+      <div
+        className={`fixed z-50 px-3 py-2 text-xs text-neutral-200 bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg pointer-events-none transition-opacity ${tooltip?.day ? "opacity-100" : "opacity-0"}`}
+        style={{ left: tooltip?.x ?? 0, top: (tooltip?.y ?? 0) - 8, transform: "translate(-50%, -100%)" }}
+        aria-hidden={!tooltip?.day}
+      >
+        {tooltip?.day && (
+          <>
+            <p className="font-medium">{new Date(tooltip.day.date + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</p>
+            {tooltip.day.sessionCount > 0 ? (
+              <p className="text-neutral-400">{tooltip.day.sessionCount} session{tooltip.day.sessionCount !== 1 ? "s" : ""} ({tooltip.day.avgWpm} WPM avg)</p>
+            ) : (
+              <p className="text-neutral-500">No sessions</p>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 });

@@ -15,7 +15,6 @@ import Switch from "@/components/Switch";
 import WpmChart from "@/components/charts/WpmChart";
 import AccuracyChart from "@/components/charts/AccuracyChart";
 import SessionsPerWeek from "@/components/charts/SessionsPerWeek";
-import PracticeHeatmap from "@/components/charts/PracticeHeatmap";
 import ModeBreakdown from "@/components/charts/ModeBreakdown";
 import ErrorDistribution from "@/components/charts/ErrorDistribution";
 import BigramChart from "@/components/charts/BigramChart";
@@ -240,10 +239,9 @@ export default function StatsPage() {
           <Panel><AnalyticsSummary sessions={sessions} /></Panel>
         )}
 
-        {/* Row 5: Activity (Practice heatmap + Sessions per week) */}
+        {/* Row 5: Activity (Sessions per week) */}
         {sessions.length >= 2 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {sessions.length > 0 && <Panel><PracticeHeatmap sessions={sessions} /></Panel>}
             <Panel><SessionsPerWeek sessions={sessions} /></Panel>
           </div>
         )}
