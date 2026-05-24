@@ -6,7 +6,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
 import GlowBorder from "@/components/GlowBorder";
-import StatsDisplay from "@/components/StatsDisplay";
 import ModeSelector from "@/components/ModeSelector";
 import VisualKeyboard from "@/components/VisualKeyboard";
 import { buildSessionStats, calculateWpm, calculateAccuracy } from "@/lib/engine";
@@ -17,8 +16,11 @@ import { getRandomPassage } from "@/lib/passages";
 import { recordSession, getProgress, getUnlockedDrillLevels, getUnlockedDifficulties, getLevelQualifyingSessions, UNLOCK_SESSIONS_REQUIRED, syncToRemote, loadFromRemote, mergeProgress, getUserPin, setUserPin, clearUserPin, processDrillDemotion, getHighestUnlockedDrillLevel } from "@/lib/progress";
 import PinEntry from "@/components/PinEntry";
 import TipBox from "@/components/TipBox";
+import ZenTypingArea from "@/components/ZenTypingArea";
+import ZenResponsePanel from "@/components/ZenResponsePanel";
 import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
 import { computeSessionTimingMetadata, updatePracticeTargets } from "@/lib/analytics";
+import { fetchZenTopic, buildZenSessionStats, type SpellCheckResult } from "@/lib/zen";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState, PracticeTargets } from "@/lib/types";
 
 export default function Home() {
@@ -81,6 +83,12 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [bestAccuracy, setBestAccuracy] = useState(0);
   const [practiceTargets, setPracticeTargets] = useState<PracticeTargets | undefined>(undefined);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [zenTopic, setZenTopic] = useState<string | null>(null);
+  const [zenText, setZenText] = useState("");
+  const [zenSpellResults, setZenSpellResults] = useState<Map<number, SpellCheckResult>>(new Map());
+  const [zenWordCount, setZenWordCount] = useState(0);
+  const [zenTopicLoading, setZenTopicLoading] = useState(false);
+  const zenAvailable = !!process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -111,7 +119,18 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const currentText = currentPassage.text;
 
   /* eslint-disable react-hooks/set-state-in-effect */
+  // Fetch zen topic on first zen mode entry
+  const zenTopicFetchedRef = useRef(false);
   useEffect(() => {
+    if (mode === "zen" && !zenTopic && !zenTopicLoading && !zenTopicFetchedRef.current) {
+      zenTopicFetchedRef.current = true;
+      setZenTopicLoading(true);
+      fetchZenTopic().then((t) => { setZenTopic(t); setZenTopicLoading(false); });
+    }
+  }, [mode, zenTopic, zenTopicLoading]);
+
+  useEffect(() => {
+    if (mode === "zen") return;
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
       setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels, practiceTargets), source: "" });
@@ -285,8 +304,104 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     setTextKey((k) => k + 1);
     setPosition(0);
     setCurrentTip(null);
+    setZenText("");
+    setZenSpellResults(new Map());
+    setZenWordCount(0);
     recentErrorsRef.current = [];
   }, []);
+
+  const handleFetchZenTopic = useCallback(async () => {
+    zenTopicFetchedRef.current = true;
+    setZenTopicLoading(true);
+    setZenText("");
+    setZenWordCount(0);
+    setZenSpellResults(new Map());
+    const topic = await fetchZenTopic();
+    setZenTopic(topic);
+    setZenTopicLoading(false);
+  }, []);
+
+  const handleZenProgress = useCallback((wc: number, keyStrokes: KeyStroke[], text: string, spellResults: Map<number, SpellCheckResult>) => {
+    setZenWordCount(wc);
+    setZenText(text);
+    setZenSpellResults(spellResults);
+    setIsActive(true);
+    if (keyStrokes.length >= 2) {
+      const duration = keyStrokes[keyStrokes.length - 1].timestamp - keyStrokes[0].timestamp;
+      const chars = keyStrokes.length;
+      setLiveWpm(Math.round((chars / 5) / (duration / 60000)));
+      setElapsed(duration);
+    }
+    // Live accuracy from spell-check results received so far
+    if (spellResults.size > 0) {
+      let correct = 0;
+      for (const r of spellResults.values()) { if (r.correct) correct++; }
+      setLiveAccuracy(Math.round((correct / spellResults.size) * 100));
+    } else {
+      setLiveAccuracy(100);
+    }
+  }, []);
+
+  const handleZenComplete = useCallback((keyStrokes: KeyStroke[], text: string, spellResults: Map<number, SpellCheckResult>) => {
+    const stats = buildZenSessionStats(keyStrokes, text, spellResults, zenTopic || "");
+    setZenText(text);
+    setZenSpellResults(spellResults);
+    setIsActive(false);
+    setSessionStats({ wpm: stats.wpm, accuracy: stats.accuracy, totalChars: text.length, correctChars: text.length, errors: stats.misspelledWords.length, duration: stats.duration, keyStrokes });
+    setSessionResults((prev) => [...prev, { wpm: stats.wpm, accuracy: stats.accuracy }]);
+
+    const modeLabel = "zen";
+    const timingMetadata = computeSessionTimingMetadata(keyStrokes);
+    const enrichment = {
+      modeDetails: { type: "zen" as const, topic: zenTopic || "", wordCount: stats.wordCount, misspelledWords: stats.misspelledWords },
+      timingMetadata,
+    };
+    const { progress: updated, session } = recordSession({ wpm: stats.wpm, accuracy: stats.accuracy, totalChars: text.length, correctChars: text.length - (stats.misspelledWords.length * 5), errors: stats.misspelledWords.length, duration: stats.duration, keyStrokes }, modeLabel, enrichment);
+
+    setUnlockVersion((v) => v + 1);
+    const baseXp = 5 + (stats.accuracy >= 95 ? 5 : stats.accuracy >= 85 ? 3 : 0);
+    updated.xp = (updated.xp || 0) + baseXp;
+
+    const context: AchievementContext = {
+      totalSessions: updated.totalSessions,
+      totalCharsTyped: updated.totalCharsTyped,
+      bestWpm: updated.bestWpm,
+      bestAccuracy: updated.bestAccuracy,
+      currentStreak: updated.currentStreak,
+      bestStreak: updated.bestStreak,
+      sessionWpm: stats.wpm,
+      sessionAccuracy: stats.accuracy,
+      levelProgress: updated.levelProgress,
+    };
+    const earned = checkAchievements(context, updated.achievements.map((a) => a.id));
+    if (earned.length > 0) {
+      const now = new Date().toISOString();
+      for (const a of earned) {
+        updated.achievements.push({ id: a.id, unlockedAt: now });
+        updated.xp += a.xp;
+      }
+      setNewAchievements(earned);
+      setTimeout(() => setNewAchievements([]), 4000);
+    }
+
+    localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
+    syncToRemote(updated, session).then((result) => {
+      if (!result.ok && result.reason !== "not-configured") {
+        setSyncError(result.reason === "network" ? "Sync failed — network error." : `Sync failed (HTTP ${result.status ?? "?"}).`);
+        setTimeout(() => setSyncError(null), 6000);
+      }
+    });
+  }, [zenTopic]);
+
+  const handleNewZenTopic = useCallback(() => {
+    if (isActive && zenWordCount > 0) {
+      setIsActive(false);
+      setSessionStats(null);
+      setLiveWpm(0);
+      setElapsed(0);
+    }
+    handleFetchZenTopic();
+  }, [isActive, zenWordCount, handleFetchZenTopic]);
 
   const handleKeyPress = useCallback((key: string, code: string, correct: boolean | null) => {
     clearTimeout(activeKeyTimeoutRef.current);
@@ -361,11 +476,6 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
         </div>
       </header>
 
-      {position === 0 && !isActive && (
-        <div className="relative w-full px-6 sm:px-10 pt-3 flex justify-end">
-          <p className="text-sm text-slate-400 dark:text-slate-500">Start typing to begin...</p>
-        </div>
-      )}
 
       {demotionNotice && (
         <div className="relative w-full px-6 sm:px-10 pt-3" role="status" aria-live="polite">
@@ -388,56 +498,76 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       )}
 
       <div className="relative w-full px-6 sm:px-10 py-8 space-y-10">
-        <ModeSelector
-          mode={mode}
-          drillLevel={drillLevel}
-          passageDifficulty={passageDifficulty}
-          passageCategory={passageCategory}
-          unlockedDrillLevels={unlockedDrillLevels}
-          unlockedDifficulties={unlockedDifficulties}
-          drillProgress={drillProgress}
-          difficultyProgress={difficultyProgress}
-          unlockThreshold={UNLOCK_SESSIONS_REQUIRED}
-          onModeChange={(m) => { setMode(m); handleNext(); }}
-          onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
-          onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
-          onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
-        />
+        <div className="flex items-start justify-between gap-4">
+          <ModeSelector
+            mode={mode}
+            drillLevel={drillLevel}
+            passageDifficulty={passageDifficulty}
+            passageCategory={passageCategory}
+            unlockedDrillLevels={unlockedDrillLevels}
+            unlockedDifficulties={unlockedDifficulties}
+            drillProgress={drillProgress}
+            difficultyProgress={difficultyProgress}
+            unlockThreshold={UNLOCK_SESSIONS_REQUIRED}
+            zenAvailable={zenAvailable}
+            zenTopic={zenTopic || undefined}
+            zenTopicLoading={zenTopicLoading}
+            onModeChange={(m) => { setMode(m); handleNext(); }}
+            onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
+            onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
+            onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
+            onNewZenTopic={handleNewZenTopic}
+          />
 
-        <LevelProgress
-          mode={mode}
-          qualifying={mode === "drill" ? (drillProgress[drillLevel] ?? 0) : (difficultyProgress[passageDifficulty] ?? 0)}
-          threshold={UNLOCK_SESSIONS_REQUIRED}
-          label={mode === "drill" ? drillLevel.replace("-", " ") : passageDifficulty}
-        />
+          {(isActive || sessionStats) && (
+            <div className="animate-fade-in">
+              <InlineStats
+                wpm={sessionStats?.wpm ?? liveWpm}
+                accuracy={sessionStats?.accuracy ?? liveAccuracy}
+                elapsed={sessionStats ? Math.round(sessionStats.duration / 1000) : Math.round(elapsed / 1000)}
+                combo={mode !== "zen" ? combo : 0}
+                isActive={isActive}
+              />
+            </div>
+          )}
+        </div>
 
-        <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} targets={practiceTargets} />
-
-        {(isActive || sessionStats) && (
-          <StatsDisplay
-            stats={sessionStats}
-            liveWpm={liveWpm}
-            liveAccuracy={liveAccuracy}
-            isActive={isActive}
-            elapsed={elapsed}
-            combo={combo}
-            sessionAvgWpm={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.wpm, 0) / sessionResults.length) : undefined}
-            sessionAvgAccuracy={sessionResults.length > 0 ? Math.round(sessionResults.reduce((s, r) => s + r.accuracy, 0) / sessionResults.length) : undefined}
-            allTimeBestWpm={sessionStats ? bestWpm : undefined}
-            allTimeBestAccuracy={sessionStats ? bestAccuracy : undefined}
+        {mode !== "zen" && (
+          <LevelProgress
+            mode={mode}
+            qualifying={mode === "drill" ? (drillProgress[drillLevel] ?? 0) : (difficultyProgress[passageDifficulty] ?? 0)}
+            threshold={UNLOCK_SESSIONS_REQUIRED}
+            label={mode === "drill" ? drillLevel.replace("-", " ") : passageDifficulty}
           />
         )}
 
+        {mode === "drill" && <AdaptiveTargetIndicator mode={mode} drillLevel={drillLevel} targets={practiceTargets} />}
+
         <div className="relative">
           <TipBox tip={currentTip} loading={tipLoading} />
-          <GlowBorder radius="1rem" intensity="punchy">
-            <TypingArea
-              text={currentText}
-              onComplete={handleComplete}
-              onProgress={handleProgress}
-              onKeyPress={handleKeyPress}
-            />
-          </GlowBorder>
+          {mode === "zen" ? (
+            zenTopic && !zenTopicLoading ? (
+              <ZenTypingArea
+                topic={zenTopic}
+                onProgress={handleZenProgress}
+                onComplete={handleZenComplete}
+              />
+            ) : !zenTopicLoading ? (
+              <div className="flex flex-col items-center justify-center h-48 gap-3" role="status" aria-live="polite">
+                <p className="text-sm text-neutral-400">Couldn&apos;t generate topic</p>
+                <button onClick={handleFetchZenTopic} className="px-4 py-2 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg transition-colors">Try again</button>
+              </div>
+            ) : null
+          ) : (
+            <GlowBorder radius="1rem" intensity="punchy">
+              <TypingArea
+                text={currentText}
+                onComplete={handleComplete}
+                onProgress={handleProgress}
+                onKeyPress={handleKeyPress}
+              />
+            </GlowBorder>
+          )}
         </div>
 
         {sessionStats && newAchievements.length > 0 && (
@@ -454,10 +584,14 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           </div>
         )}
 
-        <VisualKeyboard
-          activeKey={activeKey}
-          nextExpectedKey={position < currentText.length ? currentText[position] : null}
-        />
+        {mode === "zen" ? (
+          <ZenResponsePanel text={zenText} spellResults={zenSpellResults} />
+        ) : (
+          <VisualKeyboard
+            activeKey={activeKey}
+            nextExpectedKey={position < currentText.length ? currentText[position] : null}
+          />
+        )}
 
         {mode === "passage" && !sessionStats && currentPassage.source && (
           <p className="text-center text-xs text-slate-400 dark:text-slate-500">
@@ -474,12 +608,22 @@ const XpBar = memo(function XpBar({ xp }: { xp: number }) {
   const pct = Math.min(100, Math.round((currentXp / nextLevelXp) * 100));
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 group/xp relative">
       <span className="text-xs font-bold text-[#00ff88]">Lv.{level}</span>
       <div className="w-20 h-1.5 bg-neutral-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={currentXp} aria-valuemax={nextLevelXp} aria-label={`Level ${level} progress: ${pct}%`}>
         <div className="h-full bg-[#00ff88]/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-neutral-400">{xp} XP</span>
+      <span className="text-neutral-500 hover:text-neutral-300 cursor-help text-xs" aria-label="How XP works">
+        &#9432;
+        <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 p-3 text-xs text-neutral-200 bg-neutral-900 border border-neutral-700 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.5)] opacity-0 group-hover/xp:opacity-100 pointer-events-none transition-opacity z-50 leading-relaxed">
+          <strong className="text-[#00ff88]">XP System</strong><br />
+          +5 per session<br />
+          +3 bonus at 85%+ accuracy<br />
+          +5 bonus at 95%+ accuracy<br />
+          Achievements award extra XP
+        </span>
+      </span>
     </div>
   );
 });
@@ -509,6 +653,30 @@ function LevelProgress({ qualifying, threshold, label }: { mode: TrainingMode; q
     </div>
   );
 }
+
+const InlineStats = memo(function InlineStats({ wpm, accuracy, elapsed, combo, isActive }: { wpm: number; accuracy: number; elapsed: number; combo: number; isActive: boolean }) {
+  return (
+    <div className={`flex items-center gap-5 transition-opacity ${isActive ? "opacity-100" : "opacity-60"}`} aria-live="off">
+      <div className="text-right">
+        <span className="text-lg font-bold text-emerald-400">{wpm}</span>
+        <span className="text-xs text-neutral-500 ml-1">WPM</span>
+      </div>
+      <div className="text-right">
+        <span className={`text-lg font-bold ${accuracy >= 95 ? "text-emerald-400" : accuracy >= 80 ? "text-amber-400" : "text-red-400"}`}>{accuracy}%</span>
+        <span className="text-xs text-neutral-500 ml-1">Acc</span>
+      </div>
+      <div className="text-right">
+        <span className="text-lg font-bold text-neutral-400">{elapsed}s</span>
+      </div>
+      {combo > 2 && (
+        <div className="text-right">
+          <span className="text-lg font-bold text-orange-400">{combo}</span>
+          <span className="text-xs text-neutral-500 ml-1">Combo</span>
+        </div>
+      )}
+    </div>
+  );
+});
 
 const AdaptiveTargetIndicator = memo(function AdaptiveTargetIndicator({ mode, drillLevel, targets: rawTargets }: { mode: TrainingMode; drillLevel: DrillLevel; targets: PracticeTargets | undefined }) {
   if (mode !== "drill" || !rawTargets) return null;
