@@ -21,7 +21,10 @@ import ZenResponsePanel from "@/components/ZenResponsePanel";
 import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
 import { computeSessionTimingMetadata, updatePracticeTargets } from "@/lib/analytics";
 import { fetchZenTopic, buildZenSessionStats, type SpellCheckResult } from "@/lib/zen";
-import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState, PracticeTargets } from "@/lib/types";
+import { checkBadgeUnlocks, getCurrentBadge } from "@/lib/badges";
+import BadgeToast from "@/components/BadgeToast";
+import BadgeIcon from "@/components/BadgeIcon";
+import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState, PracticeTargets, BadgeDefinition } from "@/lib/types";
 
 export default function Home() {
   const [hasPin, setHasPin] = useState<boolean | null>(null);
@@ -67,6 +70,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const soundEnabledRef = useRef(false);
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
+  const [newBadge, setNewBadge] = useState<BadgeDefinition | null>(null);
   const [currentTip, setCurrentTip] = useState<string | null>(null);
   const [tipLoading, setTipLoading] = useState(false);
   const tipCooldownRef = useRef(false);
@@ -238,9 +242,23 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       }
       setUnlockVersion((v) => v + 1);
 
-      // Award base XP + check achievements in one pass
+      // Award base XP + check badges + achievements
+      const oldLevel = getLevelFromXp(updated.xp || 0).level;
       const baseXp = 5 + (stats.accuracy >= 95 ? 5 : stats.accuracy >= 85 ? 3 : 0);
       updated.xp = (updated.xp || 0) + baseXp;
+      const newLevel = getLevelFromXp(updated.xp).level;
+
+      // Badge unlock check
+      if (newLevel > oldLevel) {
+        const newBadges = checkBadgeUnlocks(oldLevel, newLevel, updated.badges || []);
+        if (newBadges.length > 0) {
+          const now = new Date().toISOString();
+          if (!updated.badges) updated.badges = [];
+          for (const b of newBadges) updated.badges.push({ id: b.id, unlockedAt: now });
+          setNewBadge(newBadges[newBadges.length - 1]);
+          setTimeout(() => setNewBadge(null), 4000);
+        }
+      }
 
       const context: AchievementContext = {
         totalSessions: updated.totalSessions,
@@ -359,8 +377,21 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     const { progress: updated, session } = recordSession({ wpm: stats.wpm, accuracy: stats.accuracy, totalChars: text.length, correctChars: text.length - (stats.misspelledWords.length * 5), errors: stats.misspelledWords.length, duration: stats.duration, keyStrokes }, modeLabel, enrichment);
 
     setUnlockVersion((v) => v + 1);
+    const zenOldLevel = getLevelFromXp(updated.xp || 0).level;
     const baseXp = 5 + (stats.accuracy >= 95 ? 5 : stats.accuracy >= 85 ? 3 : 0);
     updated.xp = (updated.xp || 0) + baseXp;
+    const zenNewLevel = getLevelFromXp(updated.xp).level;
+
+    if (zenNewLevel > zenOldLevel) {
+      const newBadges = checkBadgeUnlocks(zenOldLevel, zenNewLevel, updated.badges || []);
+      if (newBadges.length > 0) {
+        const now = new Date().toISOString();
+        if (!updated.badges) updated.badges = [];
+        for (const b of newBadges) updated.badges.push({ id: b.id, unlockedAt: now });
+        setNewBadge(newBadges[newBadges.length - 1]);
+        setTimeout(() => setNewBadge(null), 4000);
+      }
+    }
 
     const context: AchievementContext = {
       totalSessions: updated.totalSessions,
@@ -444,6 +475,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-transparent transition-colors relative">
+      <BadgeToast badge={newBadge} />
       <div className="ambient-bg" aria-hidden="true" />
       <header className="dark:bg-[#141414]/80 border-b border-slate-200 dark:border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm relative">
         <div className="w-full px-6 sm:px-10 py-3 flex items-center justify-between">
@@ -606,9 +638,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 const XpBar = memo(function XpBar({ xp }: { xp: number }) {
   const { level, currentXp, nextLevelXp } = getLevelFromXp(xp);
   const pct = Math.min(100, Math.round((currentXp / nextLevelXp) * 100));
+  const badge = getCurrentBadge(level);
 
   return (
     <div className="flex items-center gap-2 group/xp relative">
+      {badge && <BadgeIcon badge={badge} size="sm" />}
       <span className="text-xs font-bold text-[#00ff88]">Lv.{level}</span>
       <div className="w-20 h-1.5 bg-neutral-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={currentXp} aria-valuemax={nextLevelXp} aria-label={`Level ${level} progress: ${pct}%`}>
         <div className="h-full bg-[#00ff88]/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
