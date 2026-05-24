@@ -18,6 +18,11 @@ modify any source. You report findings only.
 - Constitution Engineering Standards: keyboard-only operation MUST work
   for all interactive flows; focus rings MUST be visible; no
   `outline: none` without a replacement.
+- `.specify/feature.json` — current feature directory. Read the feature's
+  `spec.md` for acceptance scenarios that reference accessibility
+  (keyboard operation, screen reader, focus management). Cross-reference
+  the implementation against those scenarios. If no feature.json exists,
+  scan `specs/` for the most recent feature spec.
 
 ## Review checklist
 

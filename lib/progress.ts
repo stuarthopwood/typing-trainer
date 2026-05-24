@@ -1,4 +1,6 @@
-import type { SessionStats, EnrichedSessionSummary, SessionTimingMetadata, PracticeTargets } from "./types";
+import type { SessionStats, EnrichedSessionSummary, SessionTimingMetadata, PracticeTargets, BadgeProgress } from "./types";
+import { migrateBadges } from "./badges";
+import { getLevelFromXp } from "./achievements";
 
 export interface ProgressData {
   totalSessions: number;
@@ -16,10 +18,11 @@ export interface ProgressData {
   tips: { text: string; explanation?: string; createdAt: string }[];
   practiceTargets?: PracticeTargets;
   drillLowAccuracyStreak?: Record<string, number>;
+  badges?: BadgeProgress[];
 }
 
 export interface SessionEnrichment {
-  modeDetails: { type: "drill" | "passage"; level?: string; category?: string };
+  modeDetails: { type: "drill" | "passage" | "zen"; level?: string; category?: string; topic?: string; wordCount?: number; misspelledWords?: string[] };
   timingMetadata?: SessionTimingMetadata;
 }
 
@@ -41,6 +44,11 @@ export function getProgress(): ProgressData {
     if (!data.achievements) data.achievements = [];
     if (!data.tips) data.tips = [];
     if (!data.drillLowAccuracyStreak) data.drillLowAccuracyStreak = {};
+    if (!data.badges) {
+      const { level } = getLevelFromXp(data.xp || 0);
+      data.badges = migrateBadges(level);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
     return data;
   } catch {
     return defaultProgress();
@@ -55,8 +63,11 @@ export function recordSession(stats: SessionStats, mode: string, enrichment?: Se
   progress.totalSessions += 1;
   progress.totalCharsTyped += stats.totalChars;
 
-  if (stats.wpm > progress.bestWpm) progress.bestWpm = stats.wpm;
-  if (stats.accuracy > progress.bestAccuracy) progress.bestAccuracy = stats.accuracy;
+  const isZen = mode.startsWith("zen");
+  if (!isZen) {
+    if (stats.wpm > progress.bestWpm) progress.bestWpm = stats.wpm;
+    if (stats.accuracy > progress.bestAccuracy) progress.bestAccuracy = stats.accuracy;
+  }
 
   if (progress.lastSessionDate === today) {
     // same day, streak continues
@@ -87,13 +98,15 @@ export function recordSession(stats: SessionStats, mode: string, enrichment?: Se
 
   progress.recentSessions = [session, ...progress.recentSessions].slice(0, 50);
 
-  if (stats.accuracy >= 85) {
+  if (!isZen && stats.accuracy >= 85) {
     progress.levelProgress[mode] = (progress.levelProgress[mode] || 0) + 1;
   }
 
-  for (const stroke of stats.keyStrokes) {
-    if (!stroke.correct) {
-      progress.errorHeatmap[stroke.expected] = (progress.errorHeatmap[stroke.expected] || 0) + 1;
+  if (!isZen) {
+    for (const stroke of stats.keyStrokes) {
+      if (!stroke.correct) {
+        progress.errorHeatmap[stroke.expected] = (progress.errorHeatmap[stroke.expected] || 0) + 1;
+      }
     }
   }
 

@@ -21,6 +21,11 @@ modify any source. You report findings only.
 - `AGENTS.md` — Next.js 16 has breaking changes; verify against
   `node_modules/next/dist/docs/` before flagging "this isn't how Next
   works".
+- `.specify/feature.json` — current feature directory. Read the feature's
+  `spec.md` for user stories, acceptance scenarios, and functional
+  requirements. Cross-reference the implementation against each FR to
+  verify completeness. If no feature.json exists, scan `specs/` for the
+  most recent feature spec and use that.
 
 ## Review checklist
 

@@ -20,6 +20,7 @@ import ErrorDistribution from "@/components/charts/ErrorDistribution";
 import BigramChart from "@/components/charts/BigramChart";
 import AnalyticsSummary from "@/components/charts/AnalyticsSummary";
 import StreakCalendar from "@/components/StreakCalendar";
+import BadgeGallery from "@/components/BadgeGallery";
 
 export default function StatsPage() {
   const router = useRouter();
@@ -171,6 +172,9 @@ export default function StatsPage() {
 
         {/* Streak Calendar */}
         <Panel><StreakCalendar sessions={sessions} /></Panel>
+
+        {/* Badge Gallery */}
+        <Panel><BadgeGallery badges={progress.badges || []} /></Panel>
 
         {/* Row 2: Recent Sessions + AI Tips (actionable items at the top) */}
         {(sessions.length > 0 || (progress.tips && progress.tips.length > 0)) && (

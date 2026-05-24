@@ -1,4 +1,4 @@
-export type TrainingMode = "drill" | "passage";
+export type TrainingMode = "drill" | "passage" | "zen";
 
 export type DrillLevel =
   | "home-row"
@@ -52,9 +52,12 @@ export interface EnrichedSessionSummary {
   duration: number;
   charsTyped: number;
   modeDetails: {
-    type: "drill" | "passage";
+    type: "drill" | "passage" | "zen";
     level?: string;
     category?: string;
+    topic?: string;
+    wordCount?: number;
+    misspelledWords?: string[];
   };
   timingMetadata?: SessionTimingMetadata;
 }
@@ -96,4 +99,24 @@ export interface ActiveKeyState {
   code: string;
   correct: boolean | null;
   timestamp: number;
+}
+
+export interface BadgeIconLayer {
+  icon: string;
+  transform?: string;
+  color?: string;
+  opacity?: number;
+}
+
+export interface BadgeDefinition {
+  id: string;
+  name: string;
+  subtitle: string;
+  level: number;
+  layers: BadgeIconLayer[];
+}
+
+export interface BadgeProgress {
+  id: string;
+  unlockedAt: string;
 }
