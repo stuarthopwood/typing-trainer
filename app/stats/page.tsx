@@ -21,6 +21,7 @@ import ErrorDistribution from "@/components/charts/ErrorDistribution";
 import BigramChart from "@/components/charts/BigramChart";
 import AnalyticsSummary from "@/components/charts/AnalyticsSummary";
 import DeepAnalytics from "@/components/charts/DeepAnalytics";
+import BadgeGallery from "@/components/BadgeGallery";
 
 export default function StatsPage() {
   const router = useRouter();
@@ -169,6 +170,9 @@ export default function StatsPage() {
             </div>
           </Panel>
         </div>
+
+        {/* Badge Gallery */}
+        <Panel><BadgeGallery badges={progress.badges || []} /></Panel>
 
         {/* Row 2: Recent Sessions + AI Tips (actionable items at the top) */}
         {(sessions.length > 0 || (progress.tips && progress.tips.length > 0)) && (

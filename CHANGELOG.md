@@ -4,6 +4,31 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-05-22
+
+### Added
+- **XP Level Badges** — 15 snarky badges (Caveman → Elder Being) awarded at each XP level threshold.
+- FontAwesome layered icon composition for each badge with neon glow on unlocked badges.
+- Badge unlock toast notification with confetti celebration (respects `prefers-reduced-motion`).
+- Badge gallery on stats page showing all 15 badges (locked greyed / unlocked glowing).
+- Current badge displayed next to XP bar in header.
+- Automatic badge migration for existing users (retroactively awards badges based on current level).
+- `lib/badges.ts` — badge definitions, unlock logic, migration helper.
+- `components/BadgeIcon.tsx` — memoised FA layered icon renderer.
+- `components/BadgeToast.tsx` — unlock notification with canvas-confetti.
+- `components/BadgeGallery.tsx` — stats page gallery grid.
+
+## [1.5.0] — 2026-05-21
+
+### Added
+- **Zen Mode** — third training mode: free-type on AI-generated topic prompts with real-time spell-checking.
+- New `ZenTypingArea` component: textarea + overlay, fixed-height window, fading previous lines, password-manager suppression.
+- New `ZenResponsePanel` component: scrollable full-response display (replaces visual keyboard in zen mode).
+- API routes: `POST /api/zen-topic` (Anthropic Haiku topic generation), `POST /api/zen-spellcheck` (batch spell-check, 3s timeout).
+- Hybrid batch spell-check: fires on 1.5s pause OR 5 unchecked words. Final catch-up on Done.
+- Zen Mode hidden when no API key configured.
+- Zen sessions: earn XP + streaks + WPM/accuracy achievements; excluded from drill progress, error heatmap, bestWpm aggregates.
+
 ## [1.4.0] — 2026-05-21
 
 ### Added
