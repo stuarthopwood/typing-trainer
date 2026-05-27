@@ -19,6 +19,7 @@ import ModeBreakdown from "@/components/charts/ModeBreakdown";
 import ErrorDistribution from "@/components/charts/ErrorDistribution";
 import BigramChart from "@/components/charts/BigramChart";
 import AnalyticsSummary from "@/components/charts/AnalyticsSummary";
+import DeepAnalytics from "@/components/charts/DeepAnalytics";
 import StreakCalendar from "@/components/StreakCalendar";
 import BadgeGallery from "@/components/BadgeGallery";
 
@@ -241,6 +242,11 @@ export default function StatsPage() {
         {/* Row 4: Analytics summary */}
         {sessions.length >= 3 && (
           <Panel><AnalyticsSummary sessions={sessions} /></Panel>
+        )}
+
+        {/* Deep Analytics */}
+        {sessions.length >= 5 && (
+          <Panel><DeepAnalytics sessions={sessions} /></Panel>
         )}
 
         {/* Row 5: Activity (Sessions per week) */}
