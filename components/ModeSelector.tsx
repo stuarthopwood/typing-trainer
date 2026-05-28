@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard, faBook, faLock, faSpa, faRotate } from "@fortawesome/free-solid-svg-icons";
+import { faKeyboard, faBook, faLock, faSpa, faRotate, faPaste } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
 import GlowBorder from "./GlowBorder";
 
@@ -106,6 +106,21 @@ export default function ModeSelector({
             </button>
           </GlowBorder>
         )}
+        <GlowBorder radius="0.5rem" intensity="subtle">
+          <button
+            onClick={() => onModeChange("custom")}
+            className={`p-3 rounded-lg transition-all ${
+              mode === "custom"
+                ? "text-[#00ff88] bg-[#00ff88]/10"
+                : "text-neutral-300 hover:text-white"
+            }`}
+            aria-pressed={mode === "custom"}
+            aria-label="Custom text mode"
+            title="Custom text — paste your own"
+          >
+            <FontAwesomeIcon icon={faPaste} className="w-5 h-5" />
+          </button>
+        </GlowBorder>
       </div>
 
       {mode === "zen" && (
