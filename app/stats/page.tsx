@@ -22,6 +22,7 @@ import AnalyticsSummary from "@/components/charts/AnalyticsSummary";
 import DeepAnalytics from "@/components/charts/DeepAnalytics";
 import StreakCalendar from "@/components/StreakCalendar";
 import BadgeGallery from "@/components/BadgeGallery";
+import PersonalBestsCard from "@/components/PersonalBestsCard";
 
 export default function StatsPage() {
   const router = useRouter();
@@ -176,6 +177,11 @@ export default function StatsPage() {
 
         {/* Badge Gallery */}
         <Panel><BadgeGallery badges={progress.badges || []} /></Panel>
+
+        {/* Personal Bests & Lifetime Stats */}
+        {sessions.length > 0 && (
+          <Panel><PersonalBestsCard sessions={sessions} /></Panel>
+        )}
 
         {/* Row 2: Recent Sessions + AI Tips (actionable items at the top) */}
         {(sessions.length > 0 || (progress.tips && progress.tips.length > 0)) && (
