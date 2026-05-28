@@ -22,6 +22,7 @@ import AnalyticsSummary from "@/components/charts/AnalyticsSummary";
 import DeepAnalytics from "@/components/charts/DeepAnalytics";
 import StreakCalendar from "@/components/StreakCalendar";
 import BadgeGallery from "@/components/BadgeGallery";
+import NemesisCard from "@/components/NemesisCard";
 import PersonalBestsCard from "@/components/PersonalBestsCard";
 import DailyChallengeStats from "@/components/DailyChallengeStats";
 
@@ -178,6 +179,11 @@ export default function StatsPage() {
 
         {/* Badge Gallery */}
         <Panel><BadgeGallery badges={progress.badges || []} /></Panel>
+
+        {/* Nemesis Key */}
+        {Object.keys(progress.errorHeatmap).length > 0 && (
+          <Panel><NemesisCard errorHeatmap={progress.errorHeatmap} /></Panel>
+        )}
 
         {/* Personal Bests & Lifetime Stats */}
         {sessions.length > 0 && (
