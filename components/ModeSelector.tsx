@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard, faBook, faLock, faSpa, faRotate } from "@fortawesome/free-solid-svg-icons";
+import { faKeyboard, faBook, faLock, faSpa, faRotate, faCalendarDay } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
 import GlowBorder from "./GlowBorder";
 
@@ -18,11 +18,13 @@ interface ModeSelectorProps {
   zenAvailable: boolean;
   zenTopic?: string;
   zenTopicLoading?: boolean;
+  isDailyChallenge?: boolean;
   onModeChange: (mode: TrainingMode) => void;
   onDrillLevelChange: (level: DrillLevel) => void;
   onDifficultyChange: (d: Passage["difficulty"]) => void;
   onCategoryChange: (c: Passage["category"] | "all") => void;
   onNewZenTopic?: () => void;
+  onDailyChallenge?: () => void;
 }
 
 const DIFFICULTIES: Passage["difficulty"][] = ["beginner", "intermediate", "advanced"];
@@ -45,6 +47,8 @@ export default function ModeSelector({
   onDifficultyChange,
   onCategoryChange,
   onNewZenTopic,
+  isDailyChallenge,
+  onDailyChallenge,
 }: ModeSelectorProps) {
   const difficultyIndex = DIFFICULTIES.indexOf(passageDifficulty);
 
@@ -106,6 +110,21 @@ export default function ModeSelector({
             </button>
           </GlowBorder>
         )}
+        <GlowBorder radius="0.5rem" intensity="subtle">
+          <button
+            onClick={onDailyChallenge}
+            className={`p-3 rounded-lg transition-all ${
+              isDailyChallenge
+                ? "text-amber-400 bg-amber-400/10"
+                : "text-neutral-300 hover:text-white"
+            }`}
+            aria-pressed={isDailyChallenge}
+            aria-label="Daily Challenge"
+            title="Daily Challenge"
+          >
+            <FontAwesomeIcon icon={faCalendarDay} className="w-5 h-5" />
+          </button>
+        </GlowBorder>
       </div>
 
       {mode === "zen" && (
@@ -162,7 +181,7 @@ export default function ModeSelector({
                 style={{ height: "22px" }}
               />
             </button>
-            <span className="text-xs text-neutral-300 capitalize font-medium">{passageDifficulty}</span>
+            <span className="text-xs text-neutral-200 capitalize font-medium">{passageDifficulty}</span>
             {!unlockedDifficulties.has(DIFFICULTIES[difficultyIndex + 1]) && difficultyIndex < 2 && (
               <span className="text-xs text-neutral-400">
                 {difficultyProgress[passageDifficulty] ?? 0}/{unlockThreshold}

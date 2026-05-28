@@ -22,6 +22,7 @@ import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
 import { computeSessionTimingMetadata, updatePracticeTargets } from "@/lib/analytics";
 import { fetchZenTopic, buildZenSessionStats, type SpellCheckResult } from "@/lib/zen";
 import { checkBadgeUnlocks, getCurrentBadge } from "@/lib/badges";
+import { getDailyPrompt, recordDailyChallengeResult } from "@/lib/daily-challenge";
 import BadgeToast from "@/components/BadgeToast";
 import BadgeIcon from "@/components/BadgeIcon";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState, PracticeTargets, BadgeDefinition } from "@/lib/types";
@@ -93,6 +94,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [zenWordCount, setZenWordCount] = useState(0);
   const [zenTopicLoading, setZenTopicLoading] = useState(false);
   const zenAvailable = !!process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
+  const [isDailyChallenge, setIsDailyChallenge] = useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -135,6 +137,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     if (mode === "zen") return;
+    if (isDailyChallenge && mode === "passage") {
+      const { prompt } = getDailyPrompt();
+      setCurrentPassage({ text: prompt, source: "Daily Challenge" });
+      return;
+    }
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
       setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels, practiceTargets), source: "" });
@@ -143,7 +150,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       const passage = getRandomPassage(passageDifficulty, cat);
       setCurrentPassage({ text: passage.text, source: passage.source });
     }
-  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets]);
+  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets, isDailyChallenge]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchTip = useCallback(async (keyStrokes: KeyStroke[], text: string) => {
@@ -219,6 +226,10 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       setSessionStats(stats);
       setIsActive(false);
       setSessionResults((prev) => [...prev, { wpm: stats.wpm, accuracy: stats.accuracy }]);
+      if (isDailyChallenge) {
+        const today = new Date().toISOString().slice(0, 10);
+        recordDailyChallengeResult({ date: today, wpm: stats.wpm, accuracy: stats.accuracy, timeMs: stats.duration, completedAt: new Date().toISOString() });
+      }
       const modeLabel = mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`;
       const timingMetadata = computeSessionTimingMetadata(keyStrokes);
       const enrichment = {
@@ -549,6 +560,8 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
             onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
             onNewZenTopic={handleNewZenTopic}
+            isDailyChallenge={isDailyChallenge}
+            onDailyChallenge={() => { setIsDailyChallenge(!isDailyChallenge); setMode("passage"); handleNext(); }}
           />
 
           {(isActive || sessionStats) && (
