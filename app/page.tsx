@@ -137,7 +137,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     if (mode === "zen") return;
-    if (isDailyChallenge && mode === "passage") {
+    if (isDailyChallenge) {
       const { prompt } = getDailyPrompt();
       setCurrentPassage({ text: prompt, source: "Daily Challenge" });
       return;
@@ -555,7 +555,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             zenAvailable={zenAvailable}
             zenTopic={zenTopic || undefined}
             zenTopicLoading={zenTopicLoading}
-            onModeChange={(m) => { setMode(m); handleNext(); }}
+            onModeChange={(m) => { setMode(m); setIsDailyChallenge(false); handleNext(); }}
             onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
             onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
             onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
@@ -577,7 +577,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
 
-        {mode !== "zen" && (
+        {mode !== "zen" && !isDailyChallenge && (
           <LevelProgress
             mode={mode}
             qualifying={mode === "drill" ? (drillProgress[drillLevel] ?? 0) : (difficultyProgress[passageDifficulty] ?? 0)}

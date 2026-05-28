@@ -149,8 +149,12 @@ export default function ModeSelector({
         </div>
       )}
 
+      {isDailyChallenge && (
+        <span className="text-xs text-amber-400 font-medium">Daily Challenge</span>
+      )}
+
       {/* Difficulty — only meaningful in passage mode */}
-      {mode === "passage" && (() => {
+      {mode === "passage" && !isDailyChallenge && (() => {
         const unlockedCount = DIFFICULTIES.filter((d) => unlockedDifficulties.has(d)).length;
         const canCycle = unlockedCount > 1;
         return (
@@ -221,7 +225,7 @@ export default function ModeSelector({
         </div>
       )}
 
-      {mode === "passage" && (
+      {mode === "passage" && !isDailyChallenge && (
         <div className="flex flex-wrap gap-1" role="group" aria-label="Passage category filter">
           {(["all", "book", "movie", "code", "quote"] as (Passage["category"] | "all")[]).map((c) => (
             <GlowBorder key={c} radius="0.375rem" intensity="subtle">
