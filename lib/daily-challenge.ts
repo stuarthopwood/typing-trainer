@@ -76,6 +76,38 @@ export interface DailyChallengeResult {
   attempts: number;
 }
 
+export const MAX_DAILY_ATTEMPTS = 3;
+
+export interface TodayChallengeStatus {
+  completed: boolean;
+  attemptsUsed: number;
+  attemptsRemaining: number;
+  bestWpm: number;
+  bestAccuracy: number;
+  avgWpm: number;
+}
+
+export function getTodayChallengeStatus(): TodayChallengeStatus {
+  const today = new Date().toISOString().slice(0, 10);
+  const history = getDailyChallengeHistory();
+  const todayResult = history.find((h) => h.date === today);
+  const allWpms = history.filter((h) => h.wpm > 0).map((h) => h.wpm);
+  const avgWpm = allWpms.length > 0 ? Math.round(allWpms.reduce((a, b) => a + b, 0) / allWpms.length) : 0;
+
+  if (!todayResult) {
+    return { completed: false, attemptsUsed: 0, attemptsRemaining: MAX_DAILY_ATTEMPTS, bestWpm: 0, bestAccuracy: 0, avgWpm };
+  }
+
+  return {
+    completed: todayResult.attempts >= MAX_DAILY_ATTEMPTS,
+    attemptsUsed: todayResult.attempts,
+    attemptsRemaining: Math.max(0, MAX_DAILY_ATTEMPTS - todayResult.attempts),
+    bestWpm: todayResult.wpm,
+    bestAccuracy: todayResult.accuracy,
+    avgWpm,
+  };
+}
+
 export function getDailyChallengeHistory(): DailyChallengeResult[] {
   if (typeof localStorage === "undefined") return [];
   const stored = localStorage.getItem("neuralkeys-daily-challenges");

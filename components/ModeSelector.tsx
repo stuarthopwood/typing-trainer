@@ -19,6 +19,7 @@ interface ModeSelectorProps {
   zenTopic?: string;
   zenTopicLoading?: boolean;
   isDailyChallenge?: boolean;
+  dailyCompleted?: boolean;
   onModeChange: (mode: TrainingMode) => void;
   onDrillLevelChange: (level: DrillLevel) => void;
   onDifficultyChange: (d: Passage["difficulty"]) => void;
@@ -48,6 +49,7 @@ export default function ModeSelector({
   onCategoryChange,
   onNewZenTopic,
   isDailyChallenge,
+  dailyCompleted,
   onDailyChallenge,
 }: ModeSelectorProps) {
   const difficultyIndex = DIFFICULTIES.indexOf(passageDifficulty);
@@ -113,16 +115,19 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={onDailyChallenge}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-3 rounded-lg transition-all relative ${
               isDailyChallenge
                 ? "text-amber-400 bg-amber-400/10"
-                : "text-neutral-300 hover:text-white"
+                : dailyCompleted
+                  ? "text-[#00ff88]"
+                  : "text-neutral-300 hover:text-white"
             }`}
             aria-pressed={isDailyChallenge}
-            aria-label="Daily Challenge"
-            title="Daily Challenge"
+            aria-label={dailyCompleted ? "Daily Challenge (completed)" : "Daily Challenge"}
+            title={dailyCompleted ? "Daily Challenge — completed!" : "Daily Challenge"}
           >
             <FontAwesomeIcon icon={faCalendarDay} className="w-5 h-5" />
+            {dailyCompleted && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#00ff88] rounded-full" aria-hidden="true" />}
           </button>
         </GlowBorder>
       </div>
