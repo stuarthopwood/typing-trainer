@@ -24,6 +24,7 @@ import StreakCalendar from "@/components/StreakCalendar";
 import BadgeGallery from "@/components/BadgeGallery";
 import NemesisCard from "@/components/NemesisCard";
 import PersonalBestsCard from "@/components/PersonalBestsCard";
+import FingerLoadCard from "@/components/FingerLoadCard";
 import DailyChallengeStats from "@/components/DailyChallengeStats";
 
 export default function StatsPage() {
@@ -188,6 +189,11 @@ export default function StatsPage() {
         {/* Personal Bests & Lifetime Stats */}
         {sessions.length > 0 && (
           <Panel><PersonalBestsCard sessions={sessions} /></Panel>
+        )}
+
+        {/* Finger Error Distribution */}
+        {Object.keys(progress.errorHeatmap).length > 0 && (
+          <Panel><FingerLoadCard errorHeatmap={progress.errorHeatmap} /></Panel>
         )}
 
         {/* Daily Challenge Stats */}
