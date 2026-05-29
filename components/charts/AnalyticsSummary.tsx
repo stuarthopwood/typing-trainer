@@ -119,7 +119,7 @@ function AnalyticCard({ label, value, subtitle, delta, deltaColor, valueColor }:
         {delta && <span className={`text-xs ml-1 ${deltaColor || "text-neutral-400"}`}>{delta}</span>}
       </div>
       <div className="text-xs text-neutral-400 mt-1">{label}</div>
-      {subtitle && <div className="text-[10px] text-neutral-600 mt-0.5">{subtitle}</div>}
+      {subtitle && <div className="text-[10px] text-neutral-500 mt-0.5">{subtitle}</div>}
     </div>
   );
 }

@@ -33,10 +33,10 @@ export default function PinEntry({ onSubmit }: PinEntryProps) {
           onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
           placeholder="••••••"
           aria-label="PIN code"
-          className="w-56 px-4 py-3 text-center text-2xl tracking-[0.5em] bg-[#141414] border border-neutral-700 rounded-xl text-neutral-200 placeholder:tracking-[0.3em] placeholder:text-neutral-600 focus:border-[#00ff88]/50 focus:outline-none focus:ring-2 focus:ring-[#00ff88]/60 focus:ring-offset-2 focus:ring-offset-[#0d0d0d]"
+          className="w-56 px-4 py-3 text-center text-2xl tracking-[0.5em] bg-[#141414] border border-neutral-700 rounded-xl text-neutral-200 placeholder:tracking-[0.3em] placeholder:text-neutral-500 focus:border-[#00ff88]/50 focus:outline-none focus:ring-2 focus:ring-[#00ff88]/60 focus:ring-offset-2 focus:ring-offset-[#0d0d0d]"
           autoFocus
         />
-        <p className="text-xs text-neutral-600">4–6 digits</p>
+        <p className="text-xs text-neutral-500">4–6 digits</p>
         <div>
           <button
             type="submit"
@@ -46,7 +46,7 @@ export default function PinEntry({ onSubmit }: PinEntryProps) {
             Enter
           </button>
         </div>
-        <p className="text-xs text-neutral-600">Same PIN = same progress, any device</p>
+        <p className="text-xs text-neutral-500">Same PIN = same progress, any device</p>
       </form>
     </main>
   );
