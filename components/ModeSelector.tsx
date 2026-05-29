@@ -71,7 +71,7 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={() => onModeChange("drill")}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-3 rounded-lg transition-colors ${
               mode === "drill"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
                 : "text-neutral-300 hover:text-white"
@@ -85,7 +85,7 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={() => onModeChange("passage")}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-3 rounded-lg transition-colors ${
               mode === "passage"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
                 : "text-neutral-300 hover:text-white"
@@ -100,7 +100,7 @@ export default function ModeSelector({
           <GlowBorder radius="0.5rem" intensity="subtle">
             <button
               onClick={() => onModeChange("zen")}
-              className={`p-3 rounded-lg transition-all ${
+              className={`p-3 rounded-lg transition-colors ${
                 mode === "zen"
                   ? "text-[#00ff88] bg-[#00ff88]/10"
                   : "text-neutral-300 hover:text-white"
@@ -115,7 +115,7 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={onDailyChallenge}
-            className={`p-3 rounded-lg transition-all relative ${
+            className={`p-3 rounded-lg transition-colors relative ${
               isDailyChallenge
                 ? "text-amber-400 bg-amber-400/10"
                 : dailyCompleted
@@ -133,7 +133,7 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={() => onModeChange("custom")}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-3 rounded-lg transition-colors ${
               mode === "custom"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
                 : "text-neutral-300 hover:text-white"
@@ -158,7 +158,7 @@ export default function ModeSelector({
             <GlowBorder radius="0.375rem" intensity="subtle">
               <button
                 onClick={onNewZenTopic}
-                className="px-3 py-1.5 text-sm rounded-md transition-all text-neutral-300 hover:text-white flex items-center gap-1.5"
+                className="px-3 py-1.5 text-sm rounded-md transition-colors text-neutral-300 hover:text-white flex items-center gap-1.5"
                 aria-label="Generate a new topic (cancels current session)"
               >
                 <FontAwesomeIcon icon={faRotate} className="w-3 h-3" />
@@ -182,7 +182,7 @@ export default function ModeSelector({
             <button
               onClick={cycleDifficulty}
               disabled={!canCycle}
-              className={`flex items-end gap-0.5 p-3 rounded-lg transition-all ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
+              className={`flex items-end gap-0.5 p-3 rounded-lg transition-colors ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
               title={canCycle ? `Difficulty: ${passageDifficulty} (click to cycle unlocked levels)` : `Difficulty: ${passageDifficulty} (unlock more by completing sessions at 85%+ accuracy)`}
               aria-label={`Difficulty level: ${passageDifficulty}${canCycle ? " — click to cycle" : " — locked"}`}
             >
@@ -226,7 +226,7 @@ export default function ModeSelector({
                 <button
                   onClick={() => unlocked && onDrillLevelChange(level)}
                   disabled={!unlocked && drillLevel !== level}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 ${
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1 ${
                     drillLevel === level
                       ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
                       : !unlocked
@@ -251,7 +251,7 @@ export default function ModeSelector({
             <GlowBorder key={c} radius="0.375rem" intensity="subtle">
               <button
                 onClick={() => onCategoryChange(c)}
-                className={`px-3 py-1.5 text-sm rounded-md transition-all ${
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                   passageCategory === c
                     ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
                     : "text-neutral-300 hover:text-white"

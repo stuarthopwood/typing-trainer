@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, memo } from "react";
+import { useState, useCallback, useEffect, useRef, memo, startTransition } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
