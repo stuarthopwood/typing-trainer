@@ -191,9 +191,9 @@ export default function StatsPage() {
           <Panel><PersonalBestsCard sessions={sessions} /></Panel>
         )}
 
-        {/* Finger Load Balance */}
-        {sessions.length >= 5 && (
-          <Panel><FingerLoadCard sessions={sessions} /></Panel>
+        {/* Finger Error Distribution */}
+        {Object.keys(progress.errorHeatmap).length > 0 && (
+          <Panel><FingerLoadCard errorHeatmap={progress.errorHeatmap} /></Panel>
         )}
 
         {/* Daily Challenge Stats */}
