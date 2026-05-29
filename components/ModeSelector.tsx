@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard, faBook, faLock, faSpa, faRotate, faCalendarDay } from "@fortawesome/free-solid-svg-icons";
+import { faKeyboard, faBook, faLock, faSpa, faRotate, faPaste, faCalendarDay } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
 import GlowBorder from "./GlowBorder";
 
@@ -128,6 +128,21 @@ export default function ModeSelector({
           >
             <FontAwesomeIcon icon={faCalendarDay} className="w-5 h-5" />
             {dailyCompleted && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#00ff88] rounded-full" aria-hidden="true" />}
+          </button>
+        </GlowBorder>
+        <GlowBorder radius="0.5rem" intensity="subtle">
+          <button
+            onClick={() => onModeChange("custom")}
+            className={`p-3 rounded-lg transition-all ${
+              mode === "custom"
+                ? "text-[#00ff88] bg-[#00ff88]/10"
+                : "text-neutral-300 hover:text-white"
+            }`}
+            aria-pressed={mode === "custom"}
+            aria-label="Custom text mode"
+            title="Custom text — paste your own"
+          >
+            <FontAwesomeIcon icon={faPaste} className="w-5 h-5" />
           </button>
         </GlowBorder>
       </div>
