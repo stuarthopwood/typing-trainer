@@ -4,15 +4,15 @@ import UndoToast from "@/components/UndoToast";
 
 describe("UndoToast", () => {
   it("should display message with undo button", () => {
-    render(<UndoToast message="Session deleted" onUndo={vi.fn()} sessionId="123" />);
+    render(<UndoToast message="Session deleted" onUndo={vi.fn()} onExpire={vi.fn()} />);
     expect(screen.getByText(/session deleted/i)).toBeInTheDocument();
     expect(screen.getByText(/undo/i)).toBeInTheDocument();
   });
 
-  it("should call onUndo with sessionId when Undo clicked", () => {
+  it("should call onUndo when Undo clicked", () => {
     const onUndo = vi.fn();
-    render(<UndoToast message="Deleted" onUndo={onUndo} sessionId="abc" />);
+    render(<UndoToast message="Deleted" onUndo={onUndo} onExpire={vi.fn()} />);
     fireEvent.click(screen.getByText(/undo/i));
-    expect(onUndo).toHaveBeenCalledWith("abc");
+    expect(onUndo).toHaveBeenCalled();
   });
 });
