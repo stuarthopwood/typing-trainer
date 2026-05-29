@@ -4,24 +4,25 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faPlug, faCircleCheck, faCircleXmark, faTerminal } from "@fortawesome/free-solid-svg-icons";
-import { isCompanionAvailable } from "@/lib/hall-effect";
+import { isCompanionAvailable, connectHid, onHidStatus, disconnectHid } from "@/lib/hall-effect";
 
 export default function HallEffectPage() {
   const [available, setAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
-    isCompanionAvailable().then(setAvailable);
-    const interval = setInterval(() => {
-      isCompanionAvailable().then(setAvailable);
-    }, 5000);
-    return () => clearInterval(interval);
+    isCompanionAvailable().then((v) => {
+      setAvailable(v);
+      if (v) connectHid();
+    });
+    const unsub = onHidStatus((status) => setAvailable(status.connected));
+    return () => { unsub(); disconnectHid(); };
   }, []);
 
   return (
     <main className="min-h-screen bg-[#0d0d0d] text-neutral-200">
       <header className="bg-[#141414] border-b border-neutral-800/50 sticky top-0 z-10 backdrop-blur-sm">
         <div className="w-full px-6 sm:px-10 py-3 flex items-center gap-4">
-          <Link href="/" className="p-3 text-neutral-300 hover:text-[#00ff88] transition-colors" aria-label="Back">
+          <Link href="/" className="p-4 text-neutral-300 hover:text-[#00ff88] transition-colors" aria-label="Back">
             <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
           </Link>
           <h1 className="text-lg font-bold flex items-center gap-2">
@@ -34,7 +35,7 @@ export default function HallEffectPage() {
 
       <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
         {/* Status indicator */}
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${available ? "bg-[#00ff88]/5 border-[#00ff88]/30" : "bg-neutral-800/30 border-neutral-700/30"}`}>
+        <div role="status" aria-live="polite" className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${available ? "bg-[#00ff88]/5 border-[#00ff88]/30" : "bg-neutral-800/30 border-neutral-700/30"}`}>
           <FontAwesomeIcon
             icon={available ? faCircleCheck : faCircleXmark}
             className={`w-5 h-5 ${available ? "text-[#00ff88]" : "text-neutral-500"}`}

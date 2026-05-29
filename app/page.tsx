@@ -538,7 +538,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             <Link href="/stats" className="p-3 text-neutral-300 hover:text-[#00ff88] transition-colors" title="Stats">
               <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
             </Link>
-            <Link href="/hall-effect" className="p-3 text-neutral-300 hover:text-cyan-400 transition-colors" title="Hall Effect Telemetry">
+            <Link href="/hall-effect" className="p-4 text-neutral-300 hover:text-cyan-400 transition-colors" title="Hall Effect Telemetry (optional)">
               <FontAwesomeIcon icon={faPlug} className="w-4 h-4" />
             </Link>
             <button
@@ -741,16 +741,16 @@ const XpBar = memo(function XpBar({ xp }: { xp: number }) {
         <div className="h-full bg-[#00ff88]/60 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-neutral-400">{xp} XP</span>
-      <span className="text-neutral-500 hover:text-neutral-300 cursor-help text-xs" aria-label="How XP works">
+      <button type="button" className="text-neutral-500 hover:text-neutral-300 focus:text-neutral-300 cursor-help text-xs bg-transparent border-none p-0" aria-label="How XP works">
         &#9432;
-        <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 p-3 text-xs text-neutral-200 bg-neutral-900 border border-neutral-700 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.5)] opacity-0 group-hover/xp:opacity-100 pointer-events-none transition-opacity z-50 leading-relaxed">
+        <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 p-3 text-xs text-neutral-200 bg-neutral-900 border border-neutral-700 rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.5)] opacity-0 group-hover/xp:opacity-100 group-focus-within/xp:opacity-100 pointer-events-none transition-opacity z-50 leading-relaxed">
           <strong className="text-[#00ff88]">XP System</strong><br />
           +5 per session<br />
           +3 bonus at 85%+ accuracy<br />
           +5 bonus at 95%+ accuracy<br />
           Achievements award extra XP
         </span>
-      </span>
+      </button>
     </div>
   );
 });

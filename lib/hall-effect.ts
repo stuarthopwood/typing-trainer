@@ -61,7 +61,7 @@ export function connectHid(): void {
         lastStatus = data as HidStatus;
         statusCallbacks.forEach((cb) => cb(lastStatus));
       }
-    } catch { /* ignore malformed */ }
+    } catch (e) { console.warn("[HID] Malformed message:", e); }
   };
 
   ws.onclose = () => {

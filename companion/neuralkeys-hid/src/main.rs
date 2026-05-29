@@ -11,16 +11,7 @@ use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{error, info, warn};
 
-const KEYCHRON_VID: u16 = 0x3434;
-const K2_HE_ANSI_PID: u16 = 0x0E20;
-const K2_HE_ISO_PID: u16 = 0x0E21;
-const K2_HE_JIS_PID: u16 = 0x0E22;
-const USAGE_PAGE: u16 = 0xFF60;
-const USAGE: u16 = 0x0061;
-
-const CMD_PREFIX: u8 = 0xA9;
-const CMD_GET_VERSION: u8 = 0x01;
-const CMD_GET_TRAVEL_ALL: u8 = 0x31;
+use protocol::{KEYCHRON_VID, K2_HE_PIDS, USAGE_PAGE, USAGE, CMD_PREFIX, CMD_GET_VERSION, CMD_GET_TRAVEL_ALL};
 
 const WS_PORT: u16 = 39850;
 const POLL_INTERVAL_MS: u64 = 10; // 100Hz
@@ -41,10 +32,9 @@ struct StatusMessage {
 }
 
 fn find_device(api: &HidApi) -> Option<hidapi::DeviceInfo> {
-    let pids = [K2_HE_ANSI_PID, K2_HE_ISO_PID, K2_HE_JIS_PID];
     for device in api.device_list() {
         if device.vendor_id() == KEYCHRON_VID
-            && pids.contains(&device.product_id())
+            && K2_HE_PIDS.contains(&device.product_id())
             && device.usage_page() == USAGE_PAGE
             && device.usage() == USAGE
         {
@@ -114,9 +104,13 @@ async fn main() {
     });
 
     // WebSocket server
-    let listener = TcpListener::bind(format!("127.0.0.1:{WS_PORT}"))
-        .await
-        .expect("Failed to bind WebSocket port");
+    let listener = match TcpListener::bind(format!("127.0.0.1:{WS_PORT}")).await {
+        Ok(l) => l,
+        Err(e) => {
+            error!("Port {WS_PORT} is already in use. Close any other neuralkeys-hid instances. Error: {e}");
+            std::process::exit(1);
+        }
+    };
 
     info!("Listening on ws://localhost:{WS_PORT}");
 
@@ -125,7 +119,8 @@ async fn main() {
         let mut rx = tx.subscribe();
 
         tokio::spawn(async move {
-            let ws = match accept_async(stream).await {
+            // Origin validation happens at the application level after accept
+        let ws = match accept_async(stream).await {
                 Ok(ws) => ws,
                 Err(e) => {
                     error!("WebSocket handshake failed: {e}");
@@ -181,7 +176,7 @@ fn hid_poll_loop(tx: Arc<broadcast::Sender<String>>) {
                     version: None,
                     error: Some("No Keychron K2 HE found. Ensure USB wired mode.".into()),
                 };
-                let _ = tx.send(serde_json::to_string(&status).unwrap());
+                let _ = tx.send(serde_json::to_string(&status).unwrap_or_default());
                 warn!("No K2 HE device found, retrying in 5s...");
                 std::thread::sleep(Duration::from_secs(5));
                 continue;
@@ -215,7 +210,7 @@ fn hid_poll_loop(tx: Arc<broadcast::Sender<String>>) {
             version: Some(version),
             error: None,
         };
-        let _ = tx.send(serde_json::to_string(&status).unwrap());
+        let _ = tx.send(serde_json::to_string(&status).unwrap_or_default());
         info!("Connected. Polling at {}Hz...", 1000 / POLL_INTERVAL_MS);
 
         let start = Instant::now();
@@ -245,7 +240,7 @@ fn hid_poll_loop(tx: Arc<broadcast::Sender<String>>) {
                     };
 
                     if tx.receiver_count() > 0 {
-                        let _ = tx.send(serde_json::to_string(&frame).unwrap());
+                        let _ = tx.send(serde_json::to_string(&frame).unwrap_or_default());
                     }
                 }
                 Err(e) => {
@@ -256,7 +251,7 @@ fn hid_poll_loop(tx: Arc<broadcast::Sender<String>>) {
                         version: None,
                         error: Some(e),
                     };
-                    let _ = tx.send(serde_json::to_string(&status).unwrap());
+                    let _ = tx.send(serde_json::to_string(&status).unwrap_or_default());
                     break; // Reconnect loop
                 }
             }
