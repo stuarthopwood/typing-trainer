@@ -54,7 +54,7 @@ export default function HallEffectPage() {
         <section className="space-y-3">
           <h2 className="text-xl font-bold">What is this?</h2>
           <p className="text-sm text-neutral-400 leading-relaxed">
-            If you have a <strong className="text-neutral-200">Keychron K2 HE</strong> (Hall Effect) keyboard, NeuralKeys can read the
+            If you have a <strong className="text-neutral-200">Keychron Hall Effect</strong> keyboard (K2 HE, Q1 HE, K8 HE, etc.), NeuralKeys can read the
             analog sensor data from your keys in real-time. Unlike normal keyboards that only detect &ldquo;pressed&rdquo; or &ldquo;not pressed&rdquo;,
             your K2 HE measures exactly how far each key travels (0-4mm) at 100 times per second.
           </p>
@@ -77,7 +77,7 @@ export default function HallEffectPage() {
             It reads data from your keyboard over USB and sends it to NeuralKeys via a local connection.
           </p>
 
-          <div className="space-y-4 mt-4">
+          <ol className="space-y-4 mt-4 list-none p-0">
             <Step number={1} title="Connect your K2 HE via USB">
               <p>Switch to wired mode (toggle on the back of the keyboard). Bluetooth doesn&apos;t support raw HID.</p>
             </Step>
@@ -86,7 +86,7 @@ export default function HallEffectPage() {
               <p>
                 Download the pre-built binary for your OS from the{" "}
                 <a href="https://github.com/stuarthopwood/typing-trainer/releases" className="text-cyan-400 hover:text-cyan-300 underline" target="_blank" rel="noopener noreferrer">
-                  Releases page
+                  Releases page (opens in new tab)
                 </a>, or build from source:
               </p>
               <div className="mt-2 p-3 rounded-lg bg-neutral-900 border border-neutral-800 font-mono text-xs">
@@ -111,7 +111,7 @@ export default function HallEffectPage() {
                 Analog data will automatically enrich your typing sessions.
               </p>
             </Step>
-          </div>
+          </ol>
         </section>
 
         {/* Privacy */}
@@ -159,14 +159,14 @@ export default function HallEffectPage() {
 
 function Step({ number, title, children }: { number: number; title: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-4">
-      <div className="w-7 h-7 rounded-full bg-cyan-900/30 border border-cyan-700/30 flex items-center justify-center shrink-0">
+    <li className="flex gap-4">
+      <div className="w-7 h-7 rounded-full bg-cyan-900/30 border border-cyan-700/30 flex items-center justify-center shrink-0" aria-hidden="true">
         <span className="text-xs font-bold text-cyan-300">{number}</span>
       </div>
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-neutral-200">{title}</h3>
         <div className="text-sm text-neutral-400">{children}</div>
       </div>
-    </div>
+    </li>
   );
 }

@@ -183,7 +183,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           setCurrentTip(tip);
           const progress = getProgress();
           progress.tips = [{ text: tip, explanation, createdAt: new Date().toISOString() }, ...(progress.tips || [])].slice(0, 20);
-          localStorage.setItem("typing-trainer-progress", JSON.stringify(progress));
+          requestIdleCallback(() => localStorage.setItem("typing-trainer-progress", JSON.stringify(progress)));
         }
       }
     } catch {
@@ -309,7 +309,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       const patterns = detectErrorPatterns(keyStrokes, recentErrorsRef.current, timingMetadata, updated.errorHeatmap);
       updated.practiceTargets = updatePracticeTargets(updated.errorHeatmap, timingMetadata, patterns);
 
-      localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
+      requestIdleCallback(() => localStorage.setItem("typing-trainer-progress", JSON.stringify(updated)));
       syncToRemote(updated, session).then((result) => {
         if (!result.ok && result.reason !== "not-configured") {
           const reason = result.reason === "network"
@@ -449,7 +449,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       setTimeout(() => setNewAchievements([]), 4000);
     }
 
-    localStorage.setItem("typing-trainer-progress", JSON.stringify(updated));
+    requestIdleCallback(() => localStorage.setItem("typing-trainer-progress", JSON.stringify(updated)));
     syncToRemote(updated, session).then((result) => {
       if (!result.ok && result.reason !== "not-configured") {
         setSyncError(result.reason === "network" ? "Sync failed — network error." : `Sync failed (HTTP ${result.status ?? "?"}).`);

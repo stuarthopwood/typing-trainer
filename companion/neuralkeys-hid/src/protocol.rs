@@ -1,4 +1,6 @@
 /// HID protocol constants and helpers for Keychron K2 HE communication.
+/// K2 HE keys have 4mm total travel. Raw HID values range 0-235 where
+/// 235 = fully bottomed out, with a 5-unit deadzone for electrical noise.
 
 pub const KEYCHRON_VID: u16 = 0x3434;
 pub const K2_HE_PIDS: [u16; 3] = [0x0E20, 0x0E21, 0x0E22];
@@ -14,7 +16,9 @@ pub const TRAVEL_REPORTS: usize = 4;
 pub const MATRIX_KEYS: usize = REPORT_SIZE * TRAVEL_REPORTS; // 128 bytes, first 96 are keys (6x16)
 pub const KEY_COUNT: usize = 96; // 6 rows x 16 cols
 
+/// Raw value when key is fully bottomed out (~4mm travel)
 pub const MAX_TRAVEL: u8 = 235;
+/// Electrical noise floor — values below this are treated as "released"
 pub const DEADZONE: u8 = 5;
 
 /// Build a command packet for raw HID (report ID 0 + 32 bytes).
