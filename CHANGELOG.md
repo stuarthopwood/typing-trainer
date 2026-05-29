@@ -4,6 +4,21 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.16.0] — 2026-05-29
+
+### Added
+- **Hall Effect Telemetry** — optional companion service for Keychron K2 HE keyboards that streams real-time analog key travel depth (0–4mm @ 100Hz) over `ws://localhost:39850` via raw HID. Stock K2 HE firmware; no keyboard modification required.
+- `companion/neuralkeys-hid/` — Rust companion service with BDD protocol tests (13 tests in `protocol.rs`).
+- `/hall-effect` informational page — explains the feature, shows live connection status, step-by-step setup guide, privacy notice, troubleshooting.
+- `lib/hall-effect.ts` — WebSocket client with auto-reconnect, frame/status callbacks, connection detection.
+- `.github/workflows/companion-release.yml` — multi-platform release builds for the companion service (Windows / macOS Intel / macOS ARM / Linux), triggered by `companion-v*` tags.
+- Header link to `/hall-effect`.
+
+### Notes
+- Companion service is fully optional. Zero impact on NeuralKeys when not running.
+- All telemetry stays on localhost — no network traffic, no data leaves the device.
+- Analytics integration (consuming travel data in session stats) is a follow-up PR.
+
 ## [1.6.0] — 2026-05-22
 
 ### Added
