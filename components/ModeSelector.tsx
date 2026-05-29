@@ -1,7 +1,7 @@
 "use client";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faKeyboard, faBook, faLock, faSpa, faRotate } from "@fortawesome/free-solid-svg-icons";
+import { faKeyboard, faBook, faLock, faSpa, faRotate, faPaste, faCalendarDay } from "@fortawesome/free-solid-svg-icons";
 import type { TrainingMode, DrillLevel, Passage } from "@/lib/types";
 import GlowBorder from "./GlowBorder";
 
@@ -18,11 +18,14 @@ interface ModeSelectorProps {
   zenAvailable: boolean;
   zenTopic?: string;
   zenTopicLoading?: boolean;
+  isDailyChallenge?: boolean;
+  dailyCompleted?: boolean;
   onModeChange: (mode: TrainingMode) => void;
   onDrillLevelChange: (level: DrillLevel) => void;
   onDifficultyChange: (d: Passage["difficulty"]) => void;
   onCategoryChange: (c: Passage["category"] | "all") => void;
   onNewZenTopic?: () => void;
+  onDailyChallenge?: () => void;
 }
 
 const DIFFICULTIES: Passage["difficulty"][] = ["beginner", "intermediate", "advanced"];
@@ -45,6 +48,9 @@ export default function ModeSelector({
   onDifficultyChange,
   onCategoryChange,
   onNewZenTopic,
+  isDailyChallenge,
+  dailyCompleted,
+  onDailyChallenge,
 }: ModeSelectorProps) {
   const difficultyIndex = DIFFICULTIES.indexOf(passageDifficulty);
 
@@ -65,7 +71,7 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={() => onModeChange("drill")}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-3 rounded-lg transition-colors ${
               mode === "drill"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
                 : "text-neutral-300 hover:text-white"
@@ -79,7 +85,7 @@ export default function ModeSelector({
         <GlowBorder radius="0.5rem" intensity="subtle">
           <button
             onClick={() => onModeChange("passage")}
-            className={`p-3 rounded-lg transition-all ${
+            className={`p-3 rounded-lg transition-colors ${
               mode === "passage"
                 ? "text-[#00ff88] bg-[#00ff88]/10"
                 : "text-neutral-300 hover:text-white"
@@ -94,7 +100,7 @@ export default function ModeSelector({
           <GlowBorder radius="0.5rem" intensity="subtle">
             <button
               onClick={() => onModeChange("zen")}
-              className={`p-3 rounded-lg transition-all ${
+              className={`p-3 rounded-lg transition-colors ${
                 mode === "zen"
                   ? "text-[#00ff88] bg-[#00ff88]/10"
                   : "text-neutral-300 hover:text-white"
@@ -106,6 +112,39 @@ export default function ModeSelector({
             </button>
           </GlowBorder>
         )}
+        <GlowBorder radius="0.5rem" intensity="subtle">
+          <button
+            onClick={onDailyChallenge}
+            className={`p-3 rounded-lg transition-colors relative ${
+              isDailyChallenge
+                ? "text-amber-400 bg-amber-400/10"
+                : dailyCompleted
+                  ? "text-[#00ff88]"
+                  : "text-neutral-300 hover:text-white"
+            }`}
+            aria-pressed={isDailyChallenge}
+            aria-label={dailyCompleted ? "Daily Challenge (completed)" : "Daily Challenge"}
+            title={dailyCompleted ? "Daily Challenge — completed!" : "Daily Challenge"}
+          >
+            <FontAwesomeIcon icon={faCalendarDay} className="w-5 h-5" />
+            {dailyCompleted && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#00ff88] rounded-full" aria-hidden="true" />}
+          </button>
+        </GlowBorder>
+        <GlowBorder radius="0.5rem" intensity="subtle">
+          <button
+            onClick={() => onModeChange("custom")}
+            className={`p-3 rounded-lg transition-colors ${
+              mode === "custom"
+                ? "text-[#00ff88] bg-[#00ff88]/10"
+                : "text-neutral-300 hover:text-white"
+            }`}
+            aria-pressed={mode === "custom"}
+            aria-label="Custom text mode"
+            title="Custom text — paste your own"
+          >
+            <FontAwesomeIcon icon={faPaste} className="w-5 h-5" />
+          </button>
+        </GlowBorder>
       </div>
 
       {mode === "zen" && (
@@ -119,7 +158,7 @@ export default function ModeSelector({
             <GlowBorder radius="0.375rem" intensity="subtle">
               <button
                 onClick={onNewZenTopic}
-                className="px-3 py-1.5 text-sm rounded-md transition-all text-neutral-300 hover:text-white flex items-center gap-1.5"
+                className="px-3 py-1.5 text-sm rounded-md transition-colors text-neutral-300 hover:text-white flex items-center gap-1.5"
                 aria-label="Generate a new topic (cancels current session)"
               >
                 <FontAwesomeIcon icon={faRotate} className="w-3 h-3" />
@@ -130,8 +169,12 @@ export default function ModeSelector({
         </div>
       )}
 
+      {isDailyChallenge && (
+        <span className="text-xs text-amber-400 font-medium">Daily Challenge</span>
+      )}
+
       {/* Difficulty — only meaningful in passage mode */}
-      {mode === "passage" && (() => {
+      {mode === "passage" && !isDailyChallenge && (() => {
         const unlockedCount = DIFFICULTIES.filter((d) => unlockedDifficulties.has(d)).length;
         const canCycle = unlockedCount > 1;
         return (
@@ -139,7 +182,7 @@ export default function ModeSelector({
             <button
               onClick={cycleDifficulty}
               disabled={!canCycle}
-              className={`flex items-end gap-0.5 p-3 rounded-lg transition-all ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
+              className={`flex items-end gap-0.5 p-3 rounded-lg transition-colors ${canCycle ? "hover:bg-neutral-800 cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
               title={canCycle ? `Difficulty: ${passageDifficulty} (click to cycle unlocked levels)` : `Difficulty: ${passageDifficulty} (unlock more by completing sessions at 85%+ accuracy)`}
               aria-label={`Difficulty level: ${passageDifficulty}${canCycle ? " — click to cycle" : " — locked"}`}
             >
@@ -162,7 +205,7 @@ export default function ModeSelector({
                 style={{ height: "22px" }}
               />
             </button>
-            <span className="text-xs text-neutral-300 capitalize font-medium">{passageDifficulty}</span>
+            <span className="text-xs text-neutral-200 capitalize font-medium">{passageDifficulty}</span>
             {!unlockedDifficulties.has(DIFFICULTIES[difficultyIndex + 1]) && difficultyIndex < 2 && (
               <span className="text-xs text-neutral-400">
                 {difficultyProgress[passageDifficulty] ?? 0}/{unlockThreshold}
@@ -183,7 +226,7 @@ export default function ModeSelector({
                 <button
                   onClick={() => unlocked && onDrillLevelChange(level)}
                   disabled={!unlocked && drillLevel !== level}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-all flex items-center gap-1 ${
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1 ${
                     drillLevel === level
                       ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
                       : !unlocked
@@ -202,13 +245,13 @@ export default function ModeSelector({
         </div>
       )}
 
-      {mode === "passage" && (
+      {mode === "passage" && !isDailyChallenge && (
         <div className="flex flex-wrap gap-1" role="group" aria-label="Passage category filter">
           {(["all", "book", "movie", "code", "quote"] as (Passage["category"] | "all")[]).map((c) => (
             <GlowBorder key={c} radius="0.375rem" intensity="subtle">
               <button
                 onClick={() => onCategoryChange(c)}
-                className={`px-3 py-1.5 text-sm rounded-md transition-all ${
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                   passageCategory === c
                     ? "text-[#00ff88] bg-[#00ff88]/10 font-medium"
                     : "text-neutral-300 hover:text-white"

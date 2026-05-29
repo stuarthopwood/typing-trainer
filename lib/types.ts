@@ -1,4 +1,4 @@
-export type TrainingMode = "drill" | "passage" | "zen";
+export type TrainingMode = "drill" | "passage" | "zen" | "custom";
 
 export type DrillLevel =
   | "home-row"
@@ -52,7 +52,7 @@ export interface EnrichedSessionSummary {
   duration: number;
   charsTyped: number;
   modeDetails: {
-    type: "drill" | "passage" | "zen";
+    type: "drill" | "passage" | "zen" | "custom";
     level?: string;
     category?: string;
     topic?: string;

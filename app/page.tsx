@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, memo } from "react";
+import { useState, useCallback, useEffect, useRef, memo, startTransition } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
@@ -22,6 +22,9 @@ import { detectErrorPatterns, buildTipPrompt } from "@/lib/tips";
 import { computeSessionTimingMetadata, updatePracticeTargets } from "@/lib/analytics";
 import { fetchZenTopic, buildZenSessionStats, type SpellCheckResult } from "@/lib/zen";
 import { checkBadgeUnlocks, getCurrentBadge } from "@/lib/badges";
+import CustomTextInput from "@/components/CustomTextInput";
+import { paginateText } from "@/lib/custom-text";
+import { getDailyPrompt, recordDailyChallengeResult, getTodayChallengeStatus, MAX_DAILY_ATTEMPTS, type TodayChallengeStatus } from "@/lib/daily-challenge";
 import BadgeToast from "@/components/BadgeToast";
 import BadgeIcon from "@/components/BadgeIcon";
 import type { TrainingMode, DrillLevel, KeyStroke, SessionStats, Passage, ActiveKeyState, PracticeTargets, BadgeDefinition } from "@/lib/types";
@@ -93,6 +96,11 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   const [zenWordCount, setZenWordCount] = useState(0);
   const [zenTopicLoading, setZenTopicLoading] = useState(false);
   const zenAvailable = !!process.env.NEXT_PUBLIC_PROGRESS_API_KEY;
+  const [customText, setCustomText] = useState<string | null>(null);
+  const [customPages, setCustomPages] = useState<string[]>([]);
+  const [customPageIndex, setCustomPageIndex] = useState(0);
+  const [isDailyChallenge, setIsDailyChallenge] = useState(false);
+  const [dailyStatus, setDailyStatus] = useState<TodayChallengeStatus>(() => getTodayChallengeStatus());
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -134,7 +142,17 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
   }, [mode, zenTopic, zenTopicLoading]);
 
   useEffect(() => {
-    if (mode === "zen") return;
+    if (mode === "zen" || mode === "custom") return;
+    if (isDailyChallenge) {
+      const status = getTodayChallengeStatus();
+      if (status.completed) {
+        setCurrentPassage({ text: "", source: "Daily Challenge — Complete" });
+      } else {
+        const { prompt } = getDailyPrompt();
+        setCurrentPassage({ text: prompt, source: `Daily Challenge — Attempt ${status.attemptsUsed + 1}/${MAX_DAILY_ATTEMPTS}` });
+      }
+      return;
+    }
     if (mode === "drill") {
       const config = DRILL_LEVELS.find((l) => l.level === drillLevel) || DRILL_LEVELS[0];
       setCurrentPassage({ text: generateDrillText(config, 50, unlockedDrillLevels, practiceTargets), source: "" });
@@ -143,7 +161,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       const passage = getRandomPassage(passageDifficulty, cat);
       setCurrentPassage({ text: passage.text, source: passage.source });
     }
-  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets]);
+  }, [mode, drillLevel, passageDifficulty, passageCategory, textKey, unlockedDrillLevels, practiceTargets, isDailyChallenge]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const fetchTip = useCallback(async (keyStrokes: KeyStroke[], text: string) => {
@@ -219,12 +237,17 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       setSessionStats(stats);
       setIsActive(false);
       setSessionResults((prev) => [...prev, { wpm: stats.wpm, accuracy: stats.accuracy }]);
-      const modeLabel = mode === "drill" ? `drill:${drillLevel}` : `passage:${passageDifficulty}`;
+      const modeLabel = mode === "drill" ? `drill:${drillLevel}` : mode === "custom" ? "custom" : `passage:${passageDifficulty}`;
+      if (isDailyChallenge) {
+        const today = new Date().toISOString().slice(0, 10);
+        recordDailyChallengeResult({ date: today, wpm: stats.wpm, accuracy: stats.accuracy, timeMs: stats.duration, completedAt: new Date().toISOString() });
+        setDailyStatus(getTodayChallengeStatus());
+      }
       const timingMetadata = computeSessionTimingMetadata(keyStrokes);
       const enrichment = {
         modeDetails: {
-          type: mode as "drill" | "passage",
-          level: mode === "drill" ? drillLevel : passageDifficulty,
+          type: mode as "drill" | "passage" | "custom",
+          level: mode === "drill" ? drillLevel : mode === "custom" ? undefined : passageDifficulty,
           category: mode === "passage" ? (passageCategory === "all" ? undefined : passageCategory) : undefined,
         },
         timingMetadata,
@@ -319,14 +342,25 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
     setIsActive(false);
     setElapsed(0);
     setCombo(0);
-    setTextKey((k) => k + 1);
     setPosition(0);
     setCurrentTip(null);
     setZenText("");
     setZenSpellResults(new Map());
     setZenWordCount(0);
     recentErrorsRef.current = [];
-  }, []);
+    if (mode === "custom" && customPages.length > 1 && customPageIndex < customPages.length - 1) {
+      const next = customPageIndex + 1;
+      setCustomPageIndex(next);
+      setCurrentPassage({ text: customPages[next], source: `Custom (page ${next + 1}/${customPages.length})` });
+    } else {
+      if (mode === "custom") {
+        setCustomText(null);
+        setCustomPages([]);
+        setCustomPageIndex(0);
+      }
+      setTextKey((k) => k + 1);
+    }
+  }, [mode, customPages, customPageIndex]);
 
   const handleFetchZenTopic = useCallback(async () => {
     zenTopicFetchedRef.current = true;
@@ -423,6 +457,14 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
       }
     });
   }, [zenTopic]);
+
+  const handleCustomStart = useCallback((text: string) => {
+    const pages = paginateText(text);
+    setCustomText(text);
+    setCustomPages(pages);
+    setCustomPageIndex(0);
+    setCurrentPassage({ text: pages[0], source: `Custom (page 1/${pages.length})` });
+  }, []);
 
   const handleNewZenTopic = useCallback(() => {
     if (isActive && zenWordCount > 0) {
@@ -544,11 +586,14 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             zenAvailable={zenAvailable}
             zenTopic={zenTopic || undefined}
             zenTopicLoading={zenTopicLoading}
-            onModeChange={(m) => { setMode(m); handleNext(); }}
+            onModeChange={(m) => { setMode(m); setIsDailyChallenge(false); handleNext(); }}
             onDrillLevelChange={(l) => { setDrillLevel(l); handleNext(); }}
             onDifficultyChange={(d) => { setPassageDifficulty(d); handleNext(); }}
             onCategoryChange={(c) => { setPassageCategory(c); handleNext(); }}
             onNewZenTopic={handleNewZenTopic}
+            isDailyChallenge={isDailyChallenge}
+            dailyCompleted={dailyStatus.completed}
+            onDailyChallenge={() => { setIsDailyChallenge(!isDailyChallenge); setMode("passage"); handleNext(); }}
           />
 
           {(isActive || sessionStats) && (
@@ -564,7 +609,7 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
 
-        {mode !== "zen" && (
+        {mode !== "zen" && !isDailyChallenge && (
           <LevelProgress
             mode={mode}
             qualifying={mode === "drill" ? (drillProgress[drillLevel] ?? 0) : (difficultyProgress[passageDifficulty] ?? 0)}
@@ -590,6 +635,14 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
                 <button onClick={handleFetchZenTopic} className="px-4 py-2 text-sm bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg transition-colors">Try again</button>
               </div>
             ) : null
+          ) : mode === "custom" && !customText ? (
+            <CustomTextInput onStart={handleCustomStart} />
+          ) : isDailyChallenge && dailyStatus.completed && !sessionStats ? (
+            <div className="flex flex-col items-center justify-center h-48 gap-3">
+              <p className="text-lg text-[#00ff88] font-medium">Daily Challenge complete!</p>
+              <p className="text-sm text-neutral-400">Best: {dailyStatus.bestWpm} WPM / {dailyStatus.bestAccuracy}% accuracy</p>
+              <p className="text-xs text-neutral-500">Come back tomorrow for a new challenge</p>
+            </div>
           ) : (
             <GlowBorder radius="1rem" intensity="punchy">
               <TypingArea
@@ -612,6 +665,43 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
                   <span className="text-neutral-500 text-xs">+{a.xp} XP</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {isDailyChallenge && sessionStats && (
+          <div className="text-center space-y-3 animate-fade-in" role="status" aria-live="polite">
+            <div className="inline-flex items-center gap-6 px-6 py-4 bg-neutral-800/50 border border-amber-400/20 rounded-xl">
+              <div>
+                <p className="text-2xl font-bold text-amber-400">{sessionStats.wpm} WPM</p>
+                <p className="text-xs text-neutral-400">{sessionStats.accuracy}% accuracy</p>
+              </div>
+              {dailyStatus.avgWpm > 0 && (
+                <div className="text-left">
+                  <p className="text-xs text-neutral-500">vs your daily avg</p>
+                  <p className={`text-sm font-medium ${sessionStats.wpm >= dailyStatus.avgWpm ? "text-[#00ff88]" : "text-red-400"}`}>
+                    {sessionStats.wpm >= dailyStatus.avgWpm ? "+" : ""}{sessionStats.wpm - dailyStatus.avgWpm} WPM
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="space-y-1">
+              {dailyStatus.bestWpm > 0 && (
+                <p className="text-xs text-neutral-400">
+                  Best today: <span className="text-amber-300 font-medium">{dailyStatus.bestWpm} WPM</span>
+                  {" "}({dailyStatus.attemptsUsed}/{MAX_DAILY_ATTEMPTS} attempts)
+                </p>
+              )}
+              {dailyStatus.attemptsRemaining > 0 ? (
+                <button
+                  onClick={handleNext}
+                  className="mt-2 px-5 py-2 text-sm font-medium text-black bg-amber-400 rounded-lg hover:bg-amber-300 transition-colors"
+                >
+                  Retry ({dailyStatus.attemptsRemaining} left)
+                </button>
+              ) : (
+                <p className="text-sm text-[#00ff88] font-medium mt-2">Daily Challenge complete!</p>
+              )}
             </div>
           </div>
         )}

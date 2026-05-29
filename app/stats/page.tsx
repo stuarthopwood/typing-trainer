@@ -15,12 +15,18 @@ import Switch from "@/components/Switch";
 import WpmChart from "@/components/charts/WpmChart";
 import AccuracyChart from "@/components/charts/AccuracyChart";
 import SessionsPerWeek from "@/components/charts/SessionsPerWeek";
-import PracticeHeatmap from "@/components/charts/PracticeHeatmap";
 import ModeBreakdown from "@/components/charts/ModeBreakdown";
 import ErrorDistribution from "@/components/charts/ErrorDistribution";
 import BigramChart from "@/components/charts/BigramChart";
 import AnalyticsSummary from "@/components/charts/AnalyticsSummary";
+import DeepAnalytics from "@/components/charts/DeepAnalytics";
+import StreakCalendar from "@/components/StreakCalendar";
 import BadgeGallery from "@/components/BadgeGallery";
+import NemesisCard from "@/components/NemesisCard";
+import PersonalBestsCard from "@/components/PersonalBestsCard";
+import FingerLoadCard from "@/components/FingerLoadCard";
+import DailyChallengeStats from "@/components/DailyChallengeStats";
+import WeeklyDigestCard from "@/components/WeeklyDigestCard";
 
 export default function StatsPage() {
   const router = useRouter();
@@ -170,8 +176,34 @@ export default function StatsPage() {
           </Panel>
         </div>
 
+        {/* Streak Calendar */}
+        <Panel><StreakCalendar sessions={sessions} /></Panel>
+
         {/* Badge Gallery */}
         <Panel><BadgeGallery badges={progress.badges || []} /></Panel>
+
+        {/* Nemesis Key */}
+        {Object.keys(progress.errorHeatmap).length > 0 && (
+          <Panel><NemesisCard errorHeatmap={progress.errorHeatmap} /></Panel>
+        )}
+
+        {/* Personal Bests & Lifetime Stats */}
+        {sessions.length > 0 && (
+          <Panel><PersonalBestsCard sessions={sessions} /></Panel>
+        )}
+
+        {/* Finger Error Distribution */}
+        {Object.keys(progress.errorHeatmap).length > 0 && (
+          <Panel><FingerLoadCard errorHeatmap={progress.errorHeatmap} /></Panel>
+        )}
+
+        {/* Daily Challenge Stats */}
+        <Panel><DailyChallengeStats /></Panel>
+
+        {/* Weekly Digest */}
+        {sessions.length >= 3 && (
+          <Panel><WeeklyDigestCard sessions={sessions} /></Panel>
+        )}
 
         {/* Row 2: Recent Sessions + AI Tips (actionable items at the top) */}
         {(sessions.length > 0 || (progress.tips && progress.tips.length > 0)) && (
@@ -240,10 +272,14 @@ export default function StatsPage() {
           <Panel><AnalyticsSummary sessions={sessions} /></Panel>
         )}
 
-        {/* Row 5: Activity (Practice heatmap + Sessions per week) */}
+        {/* Deep Analytics */}
+        {sessions.length >= 5 && (
+          <Panel><DeepAnalytics sessions={sessions} /></Panel>
+        )}
+
+        {/* Row 5: Activity (Sessions per week) */}
         {sessions.length >= 2 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {sessions.length > 0 && <Panel><PracticeHeatmap sessions={sessions} /></Panel>}
             <Panel><SessionsPerWeek sessions={sessions} /></Panel>
           </div>
         )}
