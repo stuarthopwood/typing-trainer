@@ -26,6 +26,7 @@ import NemesisCard from "@/components/NemesisCard";
 import PersonalBestsCard from "@/components/PersonalBestsCard";
 import FingerLoadCard from "@/components/FingerLoadCard";
 import DailyChallengeStats from "@/components/DailyChallengeStats";
+import WeeklyDigestCard from "@/components/WeeklyDigestCard";
 
 export default function StatsPage() {
   const router = useRouter();
@@ -198,6 +199,11 @@ export default function StatsPage() {
 
         {/* Daily Challenge Stats */}
         <Panel><DailyChallengeStats /></Panel>
+
+        {/* Weekly Digest */}
+        {sessions.length >= 3 && (
+          <Panel><WeeklyDigestCard sessions={sessions} /></Panel>
+        )}
 
         {/* Row 2: Recent Sessions + AI Tips (actionable items at the top) */}
         {(sessions.length > 0 || (progress.tips && progress.tips.length > 0)) && (
