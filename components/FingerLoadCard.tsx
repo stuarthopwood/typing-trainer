@@ -63,7 +63,7 @@ export default memo(function FingerLoadCard({ errorHeatmap }: FingerLoadCardProp
               />
             </div>
             <span className="text-xs text-neutral-300 w-8 text-right">{f.errors}</span>
-            <span className="text-[10px] text-neutral-600 w-16 truncate" title={f.keys.join(", ")}>{f.keys.join("")}</span>
+            <span className="text-[10px] text-neutral-500 w-16 truncate" title={f.keys.join(", ")}>{f.keys.join("")}</span>
           </div>
         ))}
       </div>

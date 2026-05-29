@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { computeTimeOfDay, computeFingerAccuracy, computeWpmSparkline, type TimeOfDayBucket, type FingerAccuracy } from "@/lib/deep-analytics";
+import { computeTimeOfDay, computeWpmSparkline, type TimeOfDayBucket } from "@/lib/deep-analytics";
 import type { EnrichedSessionSummary } from "@/lib/types";
 
 interface DeepAnalyticsProps {
@@ -11,21 +11,6 @@ interface DeepAnalyticsProps {
 export default memo(function DeepAnalytics({ sessions }: DeepAnalyticsProps) {
   const timeOfDay = useMemo(() => computeTimeOfDay(sessions), [sessions]);
   const sparkline = useMemo(() => computeWpmSparkline(sessions), [sessions]);
-
-  const allKeyStrokes = useMemo(() => {
-    return sessions
-      .filter((s) => s.timingMetadata)
-      .slice(0, 20)
-      .flatMap((s) => {
-        const strokes = (s as unknown as { keyStrokes?: unknown[] }).keyStrokes;
-        return Array.isArray(strokes) ? strokes : [];
-      });
-  }, [sessions]);
-
-  const fingerAccuracy = useMemo(() => {
-    if (allKeyStrokes.length === 0) return null;
-    return computeFingerAccuracy(allKeyStrokes as import("@/lib/types").KeyStroke[]);
-  }, [allKeyStrokes]);
 
   if (sessions.length < 5) return null;
 
@@ -50,13 +35,6 @@ export default memo(function DeepAnalytics({ sessions }: DeepAnalyticsProps) {
           </div>
         )}
 
-        {/* Finger Accuracy Radar (simplified as bars) */}
-        {fingerAccuracy && fingerAccuracy.length > 0 && (
-          <div className="p-4 rounded-xl bg-neutral-800/30 border border-neutral-700/30 sm:col-span-2">
-            <p className="text-xs text-neutral-400 mb-2">Finger Accuracy</p>
-            <FingerAccuracyChart data={fingerAccuracy} />
-          </div>
-        )}
       </div>
     </div>
   );
@@ -119,24 +97,3 @@ function TimeOfDayChart({ data }: { data: TimeOfDayBucket[] }) {
   );
 }
 
-function FingerAccuracyChart({ data }: { data: FingerAccuracy[] }) {
-  return (
-    <div className="flex items-end gap-1 h-24">
-      {data.map((f) => (
-        <div key={f.finger} className="flex-1 flex flex-col items-center gap-1">
-          <div className="w-full relative" style={{ height: "80px" }}>
-            <div
-              className="absolute bottom-0 w-full rounded-t transition-all"
-              style={{
-                height: `${f.accuracy}%`,
-                backgroundColor: f.accuracy >= 95 ? "#00ff88" : f.accuracy >= 85 ? "#fbbf24" : "#f87171",
-                opacity: 0.7,
-              }}
-            />
-          </div>
-          <span className="text-[9px] text-neutral-500 text-center leading-tight">{f.finger.replace("L ", "").replace("R ", "")}</span>
-        </div>
-      ))}
-    </div>
-  );
-}

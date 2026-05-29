@@ -34,7 +34,7 @@ export default memo(function BadgeGallery({ badges }: BadgeGalleryProps) {
                   <p className="text-[10px] text-neutral-500">{def.subtitle}</p>
                 )}
                 {earned && progress?.unlockedAt && (
-                  <p className="text-[10px] text-neutral-600 mt-0.5">
+                  <p className="text-[10px] text-neutral-500 mt-0.5">
                     {new Date(progress.unlockedAt).toLocaleDateString()}
                   </p>
                 )}

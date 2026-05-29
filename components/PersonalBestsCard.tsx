@@ -64,7 +64,7 @@ function PbItem({ icon, label, value, date, color }: { icon: typeof faTrophy; la
         <span className="text-xs text-neutral-400">{label}</span>
       </div>
       <p className={`text-lg font-bold ${color}`}>{value}</p>
-      {date && <p className="text-[10px] text-neutral-600">{date}</p>}
+      {date && <p className="text-[10px] text-neutral-500">{date}</p>}
     </div>
   );
 }
