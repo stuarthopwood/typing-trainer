@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, memo, startTransition } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
+import { faChartLine, faKeyboard, faVolumeHigh, faVolumeXmark, faRightFromBracket, faPlug } from "@fortawesome/free-solid-svg-icons";
 import TypingArea from "@/components/TypingArea";
 import GlowBorder from "@/components/GlowBorder";
 import ModeSelector from "@/components/ModeSelector";
@@ -537,6 +537,9 @@ function NeuralKeysApp({ onLogout }: { onLogout: () => void }) {
             </button>
             <Link href="/stats" className="p-3 text-neutral-300 hover:text-[#00ff88] transition-colors" title="Stats">
               <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />
+            </Link>
+            <Link href="/hall-effect" className="p-3 text-neutral-300 hover:text-cyan-400 transition-colors" title="Hall Effect Telemetry">
+              <FontAwesomeIcon icon={faPlug} className="w-4 h-4" />
             </Link>
             <button
               onClick={onLogout}

@@ -1,3 +1,5 @@
+mod protocol;
+
 use futures_util::{SinkExt, StreamExt};
 use hidapi::HidApi;
 use serde::Serialize;
