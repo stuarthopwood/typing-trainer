@@ -4,6 +4,35 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.17.0] — 2026-05-30
+
+### Changed
+- **Tabbed stats page** — `/stats` is now organised into five themed tabs: Overview, Game, Performance, Weaknesses, History. Replaces the previous single-scroll layout of 13+ panels. Active tab is encoded in the URL hash (e.g. `/stats#performance`) for deep-linking and persisted to `localStorage` (`nk-stats-active-tab`) so revisits land on the last-used tab.
+- Inactive tab panels are unmounted (lazy mount) — charts in non-visible tabs do not render until their tab is activated, reducing the initial paint cost.
+- Mobile tab bar uses horizontal scroll with auto-scroll-into-view on activation; respects `prefers-reduced-motion`.
+- Keyboard navigation follows the WAI-ARIA Authoring Practices for tabs: ArrowLeft/Right (and Up/Down) move and activate adjacent tabs with wrap-around; Home/End jump to first/last; Tab moves focus into the active panel. ARIA roles `tablist`, `tab`, `tabpanel` with `aria-selected` and `aria-controls`/`aria-labelledby` linkage.
+
+### Added
+- `components/StatsTabs.tsx` — first-party `<Tabs>` / `<TabList>` / `<Tab>` / `<TabPanel>` primitive plus the assembled `<StatsTabs>` for the `/stats` page. ~80 LOC primitive (no headless-ui / radix dependency).
+- `lib/stats-tabs.ts` — `TabSlug` union and SSR-safe `parseTabSlug` / `readPersistedTab` / `writePersistedTab` / `resolveInitialTab` helpers.
+- Empty-state messages for each tab when its panels are all gated out (no qualifying data).
+- 33 new BDD tests for `<StatsTabs>` + 24 new BDD tests for `lib/stats-tabs.ts` (414 → 422 total tests passing).
+
+### Fixed
+- Vitest `include` glob expanded to `tests/**/*.test.{ts,tsx}` so the eight pre-existing `.tsx` component test files (added in v1.16.0 but previously not collected) actually run. All eight tests now pass after fixing the underlying brittleness — the bug was that `@testing-library/react`'s `cleanup()` was not being called between tests, which made consecutive tests share DOM state.
+- `tests/setup.ts` now calls `cleanup()` after every test and stubs `window.matchMedia` for jsdom.
+- `tests/calendar.test.ts` "include today's date" — made TZ-tolerant (the production `generateCalendarGrid` emits UTC-ISO date strings while indexing by local-midnight, so in TZs behind UTC the first hours of local day can map to the previous UTC date).
+
+### Notes
+- No backend changes. No persisted-data schema changes. No new network calls.
+- Stats page version landed as MINOR per Constitution Principle VII (new feature, no breaking user-visible behaviour change).
+- The pre-existing UTC/local TZ mismatch in `generateCalendarGrid` is documented in the test rather than fixed at the source — fixing it would require auditing every UTC-ISO date string in `lib/` (analytics, daily-challenge, progress, …) and changing them in lockstep, which is out of scope for a stats-page reorg.
+
+### Deferred follow-ups (filed as Medium, accepted per quality-gate triage)
+- `components/Switch.tsx` vertical tap target is 20px (below the 44px minimum). Pre-existing tech debt; the Switch is reused, not introduced, by this PR.
+- Three identical instances of `Object.keys(progress.errorHeatmap).length > 0` in `components/StatsTabs.tsx` panel functions. Constitution IV permits "three similar lines beat a premature abstraction"; would extract if a fourth use appears.
+- PostCSS &lt; 8.5.10 transitive XSS (GHSA-qx2v-qp2m-jg93) via Next.js 16.2.6 — build-time only, no runtime CSS processing in this app. Resolves when Next.js 16.3.0+ is available.
+
 ## [1.16.0] — 2026-05-29
 
 ### Added
