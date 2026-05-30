@@ -206,6 +206,45 @@ describe("StatsTabs — US2: deep-link and persistent tab state", () => {
     ).toHaveAttribute("aria-selected", "true");
   });
 
+  it("should activate a new tab when the URL hash changes externally (back/forward navigation)", () => {
+    // Given the StatsTabs are mounted on Overview
+    renderTabs();
+    expect(screen.getByRole("tab", { name: /overview/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    // When the URL hash changes externally (e.g. browser back/forward, manual paste)
+    window.location.hash = "weaknesses";
+    fireEvent(window, new Event("hashchange"));
+
+    // Then the matching tab becomes active without a remount
+    expect(screen.getByRole("tab", { name: /weaknesses/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("should keep functioning when localStorage.setItem throws (US2 graceful degradation)", () => {
+    // Given a localStorage that refuses writes (private mode, quota exceeded)
+    const stub = makeStubStorage();
+    stub.setItem = () => {
+      throw new Error("quota exceeded");
+    };
+    vi.stubGlobal("localStorage", stub);
+    renderTabs();
+
+    // When the user switches tabs
+    fireEvent.click(screen.getByRole("tab", { name: /performance/i }));
+
+    // Then the tab still activates and the URL hash still updates — write failure is non-fatal
+    expect(screen.getByRole("tab", { name: /performance/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(window.location.hash).toBe("#performance");
+  });
+
   it("should fall back to overview when the URL hash is unrecognised (US2 #3)", () => {
     // Given an unknown URL hash and nothing persisted
     window.location.hash = "nonsense";
@@ -522,6 +561,23 @@ describe("StatsTabs — panel content per tab", () => {
 
     // Then the panel mounts and the heading "nemesis" appears
     expect(screen.getByText(/nemesis/i)).toBeInTheDocument();
+  });
+
+  it("should call onHeatmapCaseChange when the case toggle is clicked (FR-006)", () => {
+    // Given a user with errors viewing the Weaknesses tab
+    const progress = makeProgress({ errorHeatmap: { a: 3, e: 2 } });
+    const onHeatmapCaseChange = vi.fn();
+    renderTabs({ progress, heatmapCase: "lower", onHeatmapCaseChange });
+    fireEvent.click(screen.getByRole("tab", { name: /weaknesses/i }));
+
+    // When the user clicks the case-toggle switch
+    const toggle = screen.getByRole("switch", {
+      name: /toggle between lowercase and uppercase error heatmap/i,
+    });
+    fireEvent.click(toggle);
+
+    // Then onHeatmapCaseChange is called with the opposite case
+    expect(onHeatmapCaseChange).toHaveBeenCalledWith("upper");
   });
 
   it("should render Weaknesses content when errors exist", () => {

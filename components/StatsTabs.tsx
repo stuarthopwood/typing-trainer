@@ -20,7 +20,6 @@ import {
   faClockRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import GlowBorder from "@/components/GlowBorder";
 import StreakCalendar from "@/components/StreakCalendar";
 import BadgeGallery from "@/components/BadgeGallery";
 import NemesisCard from "@/components/NemesisCard";
@@ -44,6 +43,7 @@ import {
   writePersistedTab,
   type TabSlug,
 } from "@/lib/stats-tabs";
+import { Panel, BigStat, EmptyState, TipItem } from "@/components/stats/PanelHelpers";
 import type { ProgressData } from "@/lib/progress";
 import type { EnrichedSessionSummary } from "@/lib/types";
 import { faGauge, faBullseye, faFire, faKeyboard, faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -56,9 +56,7 @@ interface TabsContextValue {
   activeTab: TabId;
   registerTab: (tabId: TabId, el: HTMLButtonElement | null) => void;
   onTabActivate: (tabId: TabId, fromKeyboard: boolean) => void;
-  orderedTabIds: TabId[];
-  registerTabId: (tabId: TabId) => void;
-  unregisterTabId: (tabId: TabId) => void;
+  orderedTabIds: ReadonlyArray<TabId>;
 }
 
 const TabsContext = createContext<TabsContextValue | null>(null);
@@ -104,9 +102,7 @@ export function Tabs({ activeTab, onChange, tabOrder, children }: TabsProps) {
       activeTab,
       registerTab,
       onTabActivate,
-      orderedTabIds: [...tabOrder],
-      registerTabId: () => {},
-      unregisterTabId: () => {},
+      orderedTabIds: tabOrder,
     }),
     [activeTab, registerTab, onTabActivate, tabOrder],
   );
@@ -184,7 +180,7 @@ export function Tab({ tabId, icon, children }: TabProps) {
       onClick={() => onTabActivate(tabId, false)}
       className={[
         "flex items-center gap-2 min-h-[44px] min-w-[44px] px-4 py-3 shrink-0",
-        "text-sm font-medium transition-colors",
+        "text-sm font-medium motion-safe:transition-colors",
         "border-b-2 -mb-px",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff88]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d0d0d] rounded-t-md",
         isActive
@@ -339,46 +335,6 @@ function scrollActiveTabIntoView(container: HTMLDivElement | null, slug: TabSlug
 
 // ─── Panel components ────────────────────────────────────────────────────────
 
-function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <GlowBorder radius="0.75rem" intensity="normal" className={className}>
-      <div className="bg-neutral-900/40 border border-neutral-800/50 rounded-xl p-5 h-full">
-        {children}
-      </div>
-    </GlowBorder>
-  );
-}
-
-function BigStat({
-  icon,
-  value,
-  label,
-  color = "text-neutral-200",
-}: {
-  icon: IconDefinition;
-  value: string | number;
-  label: string;
-  color?: string;
-}) {
-  return (
-    <div className="text-center">
-      <div className={`text-3xl sm:text-4xl font-bold ${color}`}>{value}</div>
-      <div className="text-xs text-neutral-400 mt-1 flex items-center justify-center gap-1">
-        <FontAwesomeIcon icon={icon} className="w-3 h-3" />
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <Panel>
-      <p className="text-center text-sm text-neutral-400 py-8">{message}</p>
-    </Panel>
-  );
-}
-
 function OverviewPanel({
   progress,
   sessions,
@@ -479,7 +435,7 @@ function OverviewPanel({
                     {session.id && (
                       <button
                         onClick={() => onDeleteSession(session)}
-                        className="p-4 text-neutral-600 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-red-400/60 focus:ring-offset-1 focus:ring-offset-neutral-800 rounded"
+                        className="p-4 text-neutral-600 hover:text-red-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 motion-safe:transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-1 focus-visible:ring-offset-neutral-800 rounded"
                         aria-label={`Delete session from ${session.date} — ${session.wpm} WPM`}
                       >
                         <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
@@ -513,59 +469,6 @@ function OverviewPanel({
               </div>
             </Panel>
           )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TipItem({
-  text,
-  explanation,
-  date,
-}: {
-  text: string;
-  explanation?: string;
-  date: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const hasExplanation = !!explanation;
-
-  return (
-    <div
-      className={`rounded-lg transition-colors ${
-        hasExplanation ? "cursor-pointer hover:bg-neutral-700/40" : ""
-      } bg-neutral-800/40`}
-      onClick={() => hasExplanation && setExpanded(!expanded)}
-      onKeyDown={(e) => {
-        if (hasExplanation && (e.key === "Enter" || e.key === " ")) {
-          e.preventDefault();
-          setExpanded(!expanded);
-        }
-      }}
-      tabIndex={hasExplanation ? 0 : undefined}
-      role={hasExplanation ? "button" : undefined}
-      aria-expanded={hasExplanation ? expanded : undefined}
-    >
-      <div className="flex items-start gap-2 px-3 py-2">
-        <span className="text-amber-400 mt-0.5 text-sm">💡</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-neutral-300">{text}</p>
-          <p className="text-[10px] text-neutral-400 mt-0.5">{date}</p>
-        </div>
-        {hasExplanation && (
-          <span
-            className={`text-neutral-600 text-xs mt-1 transition-transform ${
-              expanded ? "rotate-180" : ""
-            }`}
-          >
-            ▾
-          </span>
-        )}
-      </div>
-      {expanded && explanation && (
-        <div className="px-3 pb-3 pt-0 ml-7">
-          <p className="text-xs text-neutral-400 leading-relaxed">{explanation}</p>
         </div>
       )}
     </div>
