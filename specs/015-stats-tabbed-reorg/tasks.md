@@ -170,13 +170,13 @@ Single-project Next.js App Router layout:
 
 **Purpose**: Anything that touches multiple user stories, plus pre-push gate.
 
-- [ ] T039 Run `npm run lint` — must be clean. Fix any new warnings introduced by the new files.
-- [ ] T040 Run `npm test -- --coverage` — all tests pass; coverage on `components/StatsTabs.tsx` and `lib/stats-tabs.ts` ≥ 80% on both lines and branches per Constitution II.
-- [ ] T041 Run `npx tsc --noEmit` — clean.
-- [ ] T042 Run `npm run build` — clean. Compare gzipped JS payload of the `/stats` route vs master baseline; MUST stay within +5KB envelope (plan.md Performance Goals).
-- [ ] T043 [P] Update `CHANGELOG.md`: new heading `## [1.17.0] — 2026-05-29` with `### Changed` summarising the tabbed reorganisation, `### Added` for `<StatsTabs>` + `lib/stats-tabs.ts`, and `### Notes` confirming no schema or backend changes.
-- [ ] T044 Manual smoke test against the dev server: walk every step of `quickstart.md` § "Manual smoke test" in a real browser. Specifically verify (a) deep-link works without flash, (b) prefers-reduced-motion makes tab switches instant, (c) deletion-undo persists across tab switches, (d) 320px viewport scrolls correctly.
-- [ ] T045 Run the four review sub-agents in parallel per CLAUDE.md Phase 2 quality gate: `test-engineer`, `code-reviewer`, `accessibility-auditor`, `security-auditor`. Address any Critical/High findings; defer Medium to follow-up issues if cheap; ignore Low advisories. Re-run quality gate from the top after fixes (max 3 cycles).
+- [X] T039 Run `npm run lint` — must be clean. Fix any new warnings introduced by the new files.
+- [X] T040 Run `npm test -- --coverage` — all tests pass; coverage on `components/StatsTabs.tsx` and `lib/stats-tabs.ts` ≥ 80% on both lines and branches per Constitution II.
+- [X] T041 Run `npx tsc --noEmit` — clean.
+- [X] T042 Run `npm run build` — clean. Compare gzipped JS payload of the `/stats` route vs master baseline; MUST stay within +5KB envelope (plan.md Performance Goals).
+- [X] T043 [P] Update `CHANGELOG.md`: new heading `## [1.17.0] — 2026-05-29` with `### Changed` summarising the tabbed reorganisation, `### Added` for `<StatsTabs>` + `lib/stats-tabs.ts`, and `### Notes` confirming no schema or backend changes.
+- [X] T044 Manual smoke test against the dev server: walk every step of `quickstart.md` § "Manual smoke test" in a real browser. Specifically verify (a) deep-link works without flash, (b) prefers-reduced-motion makes tab switches instant, (c) deletion-undo persists across tab switches, (d) 320px viewport scrolls correctly.
+- [X] T045 Run the four review sub-agents in parallel per CLAUDE.md Phase 2 quality gate: `test-engineer`, `code-reviewer`, `accessibility-auditor`, `security-auditor`. Address any Critical/High findings; defer Medium to follow-up issues if cheap; ignore Low advisories. Re-run quality gate from the top after fixes (max 3 cycles).
 
 ---
 
