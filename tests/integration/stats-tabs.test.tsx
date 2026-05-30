@@ -422,6 +422,23 @@ describe("StatsTabs — US4: keyboard + ARIA", () => {
     );
   });
 
+  it("should ignore unhandled keys on the tablist (defensive default case)", () => {
+    // Given Overview is active
+    renderTabs();
+    const overviewTab = screen.getByRole("tab", { name: /overview/i });
+    overviewTab.focus();
+
+    // When the user presses a key that is not part of the tablist contract
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "a" });
+    fireEvent.keyDown(screen.getByRole("tablist"), { key: "Escape" });
+
+    // Then the active tab does not change (default: return)
+    expect(screen.getByRole("tab", { name: /overview/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
   it("should jump to first tab on Home and last tab on End (US4 #2)", () => {
     // Given the user has navigated to a middle tab
     renderTabs();
@@ -693,6 +710,27 @@ describe("StatsTabs — Overview interactive elements", () => {
     expect(
       screen.queryByRole("button", { name: /use rest day/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("should expand a tip on Space key for keyboard users", () => {
+    // Given a tip with explanation
+    const progress = makeProgress({
+      tips: [
+        {
+          text: "Watch the right shift",
+          explanation: "Pinky-driven keys are slower",
+          createdAt: "2026-05-28T10:00:00Z",
+        },
+      ],
+    });
+    renderTabs({ progress });
+
+    // When the user focuses the tip and presses Space (WCAG 2.1 AA)
+    const tip = screen.getByRole("button", { name: /watch the right shift/i });
+    fireEvent.keyDown(tip, { key: " " });
+
+    // Then the explanation is expanded
+    expect(screen.getByText(/pinky-driven keys are slower/i)).toBeInTheDocument();
   });
 
   it("should expand a tip on Enter key for keyboard users", () => {

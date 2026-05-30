@@ -28,6 +28,11 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 - Stats page version landed as MINOR per Constitution Principle VII (new feature, no breaking user-visible behaviour change).
 - The pre-existing UTC/local TZ mismatch in `generateCalendarGrid` is documented in the test rather than fixed at the source — fixing it would require auditing every UTC-ISO date string in `lib/` (analytics, daily-challenge, progress, …) and changing them in lockstep, which is out of scope for a stats-page reorg.
 
+### Deferred follow-ups (filed as Medium, accepted per quality-gate triage)
+- `components/Switch.tsx` vertical tap target is 20px (below the 44px minimum). Pre-existing tech debt; the Switch is reused, not introduced, by this PR.
+- Three identical instances of `Object.keys(progress.errorHeatmap).length > 0` in `components/StatsTabs.tsx` panel functions. Constitution IV permits "three similar lines beat a premature abstraction"; would extract if a fourth use appears.
+- PostCSS &lt; 8.5.10 transitive XSS (GHSA-qx2v-qp2m-jg93) via Next.js 16.2.6 — build-time only, no runtime CSS processing in this app. Resolves when Next.js 16.3.0+ is available.
+
 ## [1.16.0] — 2026-05-29
 
 ### Added

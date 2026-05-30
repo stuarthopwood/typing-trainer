@@ -274,9 +274,7 @@ export default function StatsTabs(props: StatsTabsProps) {
   }, [activeTab]);
 
   const handleChange = useCallback((next: string) => {
-    if (TAB_ORDER.includes(next as TabSlug)) {
-      setActiveTab(next as TabSlug);
-    }
+    setActiveTab(next as TabSlug);
   }, []);
 
   return (
@@ -376,21 +374,15 @@ function OverviewPanel({
           />
         </Panel>
         <Panel className="col-span-1">
-          <div className="text-center">
-            <div className="text-3xl sm:text-4xl font-bold text-orange-400">
-              {progress.currentStreak}
-            </div>
-            <div className="text-xs text-neutral-400 mt-1 flex items-center justify-center gap-1">
-              <FontAwesomeIcon icon={faFire} className="w-3 h-3" />
-              Day Streak
-            </div>
-          </div>
+          <BigStat
+            icon={faFire}
+            value={progress.currentStreak}
+            label="Day Streak"
+            color="text-orange-400"
+          />
         </Panel>
         <Panel className="col-span-1">
-          <div className="text-center">
-            <div className="text-3xl sm:text-4xl font-bold text-neutral-200">{avgWpm}</div>
-            <div className="text-xs text-neutral-400 mt-1">Avg WPM</div>
-          </div>
+          <BigStat value={avgWpm} label="Avg WPM" />
         </Panel>
       </div>
 
@@ -403,6 +395,7 @@ function OverviewPanel({
               </h2>
               <div
                 className="space-y-1.5 max-h-72 overflow-y-auto"
+                tabIndex={0}
                 role="region"
                 aria-label="Recent sessions list"
               >
