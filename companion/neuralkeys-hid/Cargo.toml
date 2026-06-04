@@ -1,6 +1,6 @@
 [package]
 name = "neuralkeys-hid"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Companion service for NeuralKeys — reads Hall Effect analog data from Keychron K2 HE via raw HID and exposes it over WebSocket"
 license = "MIT"
