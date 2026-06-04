@@ -137,5 +137,9 @@ The service streams JSON messages on `ws://localhost:39850`:
 
 - All data stays on your computer. Nothing is sent to any server.
 - The service reads sensor **depth**, not keystrokes — it cannot directly capture what you type (that goes through the OS keyboard driver separately). Note that, like any analog telemetry, fine-grained timing and press-depth patterns *could* in principle reveal typing behaviour; this is why the socket is locked down (next bullet).
-- The WebSocket binds to `127.0.0.1` only and validates the `Origin` header: browser connections must come from `localhost` / `127.0.0.1`, so a random web page you visit cannot read the stream. Native clients (no `Origin`) are allowed.
+- The WebSocket binds to `127.0.0.1` only and validates the `Origin` header, so a random web page you visit cannot read the stream. Allowed origins: `localhost` / `127.0.0.1` / `[::1]` (local dev), the production NeuralKeys app (`https://typing-trainer-one.vercel.app`, exact match), and anything in the `NEURALKEYS_ALLOWED_ORIGINS` env var (comma-separated). Native clients (no `Origin`) are allowed.
+- There is intentionally **no `*.vercel.app` wildcard** — anyone can deploy a project there, so a wildcard would let an attacker register e.g. `typing-trainer-evil.vercel.app` and read your stream. To test a Vercel **preview** deploy, opt it in explicitly, ideally via a stable branch alias:
+  ```
+  NEURALKEYS_ALLOWED_ORIGINS=https://typing-trainer-dev.vercel.app
+  ```
 - No video, no screenshots, no network traffic beyond localhost.

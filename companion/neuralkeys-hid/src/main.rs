@@ -284,39 +284,81 @@ fn broadcast_status(tx: &broadcast::Sender<String>, status: &StatusMessage) {
 #[allow(clippy::result_large_err)]
 fn origin_guard(req: &Request, response: Response) -> Result<Response, ErrorResponse> {
     let origin = req.headers().get("origin").and_then(|v| v.to_str().ok());
-    if is_origin_allowed(origin) {
+    if is_origin_allowed(origin, &extra_allowed_origins()) {
         Ok(response)
     } else {
         warn!("Rejected WebSocket connection from disallowed origin: {origin:?}");
         let mut err = ErrorResponse::new(Some(
-            "origin not allowed; companion only accepts localhost".to_string(),
+            "origin not allowed; set NEURALKEYS_ALLOWED_ORIGINS to permit it".to_string(),
         ));
         *err.status_mut() = StatusCode::FORBIDDEN;
         Err(err)
     }
 }
 
+/// Production NeuralKeys origin (the deployed Vercel app connects *down* to
+/// this local companion, so its Origin is the public domain, not localhost).
+const PROD_ORIGIN_HOST: &str = "typing-trainer-one.vercel.app";
+
+/// Extra origins from `NEURALKEYS_ALLOWED_ORIGINS` (comma-separated), so a
+/// custom domain or a one-off host can be permitted without a rebuild.
+fn extra_allowed_origins() -> Vec<String> {
+    std::env::var("NEURALKEYS_ALLOWED_ORIGINS")
+        .map(|v| {
+            v.split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Extract the host (no scheme, no port, no path) from an Origin.
+fn origin_host(origin: &str) -> &str {
+    let host = origin
+        .strip_prefix("http://")
+        .or_else(|| origin.strip_prefix("https://"))
+        .unwrap_or(origin);
+    let host = host.split('/').next().unwrap_or(host);
+    // Bracketed IPv6 (`[::1]` / `[::1]:8080`): the host ends at `]`; only a
+    // colon *after* the bracket is a port separator.
+    if let Some(end) = host.strip_prefix('[').and_then(|_| host.find(']')) {
+        return &host[..=end];
+    }
+    // Otherwise strip a trailing `:port` if present.
+    host.rsplit_once(':').map(|(h, _)| h).unwrap_or(host)
+}
+
 /// Whether a WebSocket `Origin` header is allowed to connect.
 ///
 /// The companion streams per-key analog travel — combined with timing analysis
 /// that could leak typing behaviour — so we don't let arbitrary web pages open
-/// the socket just because they run on the same machine. Native clients send no
-/// `Origin` (allowed); browsers must originate from localhost / 127.0.0.1.
-fn is_origin_allowed(origin: Option<&str>) -> bool {
-    match origin {
-        // Native (non-browser) clients send no Origin header.
-        None => true,
-        Some(o) => {
-            let host = o
-                .strip_prefix("http://")
-                .or_else(|| o.strip_prefix("https://"))
-                .unwrap_or(o);
-            // Strip any :port suffix, then match loopback hosts exactly.
-            let host = host.split('/').next().unwrap_or(host);
-            let host = host.rsplit_once(':').map(|(h, _)| h).unwrap_or(host);
-            host == "localhost" || host == "127.0.0.1" || host == "[::1]"
-        }
+/// the socket just because they run on the same machine. Allowed:
+///  - native (non-browser) clients, which send no `Origin`;
+///  - loopback hosts (`localhost` / `127.0.0.1` / `[::1]`), for local dev;
+///  - the production NeuralKeys app (exact host match);
+///  - anything listed in `NEURALKEYS_ALLOWED_ORIGINS` (passed as `extra`).
+///
+/// NOTE: we deliberately do NOT pattern-match `typing-trainer-*.vercel.app`.
+/// Anyone can deploy a project under `*.vercel.app`, so a prefix/suffix wildcard
+/// would let an attacker register e.g. `typing-trainer-evil.vercel.app` and read
+/// the stream. Preview deploys must be opted in explicitly via the env var
+/// (e.g. a stable branch alias like `https://typing-trainer-dev.vercel.app`).
+fn is_origin_allowed(origin: Option<&str>, extra: &[String]) -> bool {
+    let Some(raw) = origin else {
+        return true; // native client, no Origin header
+    };
+    let host = origin_host(raw).to_lowercase();
+
+    if host == "localhost" || host == "127.0.0.1" || host == "[::1]" {
+        return true;
     }
+    if host == PROD_ORIGIN_HOST {
+        return true;
+    }
+    // Match env-provided entries against either the full origin or just the host.
+    let raw_lower = raw.to_lowercase();
+    extra.iter().any(|e| *e == raw_lower || *e == host)
 }
 
 fn hid_poll_loop(tx: Arc<broadcast::Sender<String>>) {
@@ -562,30 +604,103 @@ mod tests {
         assert!(tracker.record_failure());
     }
 
+    const NO_EXTRA: &[String] = &[];
+
     #[test]
     fn given_no_origin_header_when_checked_then_allowed() {
         // Given a native client that sends no Origin
         // Then it is allowed (browsers always send Origin; native tools don't)
-        assert!(is_origin_allowed(None));
+        assert!(is_origin_allowed(None, NO_EXTRA));
     }
 
     #[test]
     fn given_localhost_origins_when_checked_then_allowed() {
         // Given browser origins on loopback hosts (with assorted ports/schemes)
         // Then each is allowed
-        assert!(is_origin_allowed(Some("http://localhost:3000")));
-        assert!(is_origin_allowed(Some("http://127.0.0.1:39850")));
-        assert!(is_origin_allowed(Some("https://localhost")));
-        assert!(is_origin_allowed(Some("http://[::1]:8080")));
+        assert!(is_origin_allowed(Some("http://localhost:3000"), NO_EXTRA));
+        assert!(is_origin_allowed(Some("http://127.0.0.1:39850"), NO_EXTRA));
+        assert!(is_origin_allowed(Some("https://localhost"), NO_EXTRA));
+        assert!(is_origin_allowed(Some("http://[::1]:8080"), NO_EXTRA));
+        assert!(is_origin_allowed(Some("http://[::1]"), NO_EXTRA)); // bare IPv6, no port
+    }
+
+    #[test]
+    fn given_production_origin_when_checked_then_allowed() {
+        // Given the deployed NeuralKeys app's origin
+        // Then it is allowed (the Vercel app connects down to the local companion)
+        assert!(is_origin_allowed(
+            Some("https://typing-trainer-one.vercel.app"),
+            NO_EXTRA
+        ));
+    }
+
+    #[test]
+    fn given_unlisted_vercel_preview_when_checked_then_rejected() {
+        // Given a Vercel preview deploy that is NOT in the env allowlist
+        // Then it is rejected — anyone can deploy under *.vercel.app, so previews
+        // are not trusted by pattern; they must be opted in explicitly.
+        assert!(!is_origin_allowed(
+            Some("https://typing-trainer-abc123-stuart.vercel.app"),
+            NO_EXTRA
+        ));
+        assert!(!is_origin_allowed(
+            Some("https://typing-trainer-git-feature-x.vercel.app"),
+            NO_EXTRA
+        ));
+    }
+
+    #[test]
+    fn given_attacker_owned_vercel_project_when_checked_then_rejected() {
+        // Given an attacker who deploys a project whose name starts with the
+        // legit prefix (typing-trainer-evil.vercel.app)
+        // Then it is rejected — there is no *.vercel.app wildcard.
+        assert!(!is_origin_allowed(
+            Some("https://typing-trainer-evil.vercel.app"),
+            NO_EXTRA
+        ));
+        assert!(!is_origin_allowed(
+            Some("https://typing-trainer-phishing.vercel.app"),
+            NO_EXTRA
+        ));
+    }
+
+    #[test]
+    fn given_lookalike_vercel_origin_when_checked_then_rejected() {
+        // Given attacker domains that merely contain the project name
+        // Then they are rejected (only exact prod host / env entries pass)
+        assert!(!is_origin_allowed(
+            Some("https://evil-typing-trainer-x.vercel.app.attacker.com"),
+            NO_EXTRA
+        ));
+        assert!(!is_origin_allowed(
+            Some("https://nottyping-trainer-x.vercel.app"),
+            NO_EXTRA
+        ));
+    }
+
+    #[test]
+    fn given_env_listed_origin_when_checked_then_allowed() {
+        // Given a stable preview alias / custom origin in NEURALKEYS_ALLOWED_ORIGINS
+        let extra = vec!["https://typing-trainer-dev.vercel.app".to_string()];
+        // Then it is allowed by full-origin match
+        assert!(is_origin_allowed(
+            Some("https://typing-trainer-dev.vercel.app"),
+            &extra
+        ));
+        // And a non-listed preview is still rejected
+        assert!(!is_origin_allowed(
+            Some("https://typing-trainer-other.vercel.app"),
+            &extra
+        ));
     }
 
     #[test]
     fn given_remote_origins_when_checked_then_rejected() {
-        // Given origins that are not loopback
+        // Given origins that are not loopback, prod, preview, or env-listed
         // Then each is rejected
-        assert!(!is_origin_allowed(Some("https://evil.example.com")));
-        assert!(!is_origin_allowed(Some("http://localhost.evil.com")));
-        assert!(!is_origin_allowed(Some("http://127.0.0.1.evil.com")));
-        assert!(!is_origin_allowed(Some("null")));
+        assert!(!is_origin_allowed(Some("https://evil.example.com"), NO_EXTRA));
+        assert!(!is_origin_allowed(Some("http://localhost.evil.com"), NO_EXTRA));
+        assert!(!is_origin_allowed(Some("http://127.0.0.1.evil.com"), NO_EXTRA));
+        assert!(!is_origin_allowed(Some("null"), NO_EXTRA));
     }
 }

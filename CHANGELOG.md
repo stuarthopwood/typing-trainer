@@ -4,6 +4,17 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.17.2] — 2026-06-04
+
+### Fixed
+- **HID companion rejected the real web app.** The origin validation added in v1.17.1 only allowed `localhost`, but NeuralKeys is served from Vercel and connects *down* to the local companion — so the browser's `Origin` is the public domain and every connection got a 403. The companion now allows: loopback hosts (`localhost` / `127.0.0.1` / `[::1]`), the production app (`https://typing-trainer-one.vercel.app`, exact host match), and any origin listed in the new `NEURALKEYS_ALLOWED_ORIGINS` env var (comma-separated). Disallowed origins are still rejected with 403. Companion bumped to `v0.2.1`.
+
+### Security
+- Deliberately **no `*.vercel.app` wildcard**. A prefix/suffix pattern like `typing-trainer-*.vercel.app` would be bypassable: anyone can deploy a project under `*.vercel.app`, so an attacker could register `typing-trainer-evil.vercel.app`, lure the user there, and read the analog stream (a keystroke-timing side channel). Preview deploys must be opted in explicitly via `NEURALKEYS_ALLOWED_ORIGINS` — ideally a stable branch alias such as `https://typing-trainer-dev.vercel.app`.
+
+### Notes
+- Verified live against real hardware: `https://typing-trainer-one.vercel.app` now connects; `https://evil.example.com` and unlisted `typing-trainer-*.vercel.app` previews still get 403.
+
 ## [1.17.1] — 2026-06-04
 
 ### Fixed
