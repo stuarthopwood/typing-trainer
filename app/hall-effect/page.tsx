@@ -4,17 +4,28 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faPlug, faCircleCheck, faCircleXmark, faTerminal } from "@fortawesome/free-solid-svg-icons";
-import { isCompanionAvailable, connectHid, onHidStatus, disconnectHid } from "@/lib/hall-effect";
+import { isCompanionAvailable, connectHid, onHidStatus, disconnectHid, type PollMode } from "@/lib/hall-effect";
+
+function connectionDetail(available: boolean | null, mode: PollMode | null): string {
+  if (!available) return "Install and run the companion service to enable this feature";
+  if (mode === "batch") return "Receiving analog key data — batch mode (~100Hz)";
+  if (mode === "perkey") return "Receiving analog key data — per-key mode (~5Hz, stock firmware)";
+  return "NeuralKeys is receiving analog key data";
+}
 
 export default function HallEffectPage() {
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [mode, setMode] = useState<PollMode | null>(null);
 
   useEffect(() => {
     isCompanionAvailable().then((v) => {
       setAvailable(v);
       if (v) connectHid();
     });
-    const unsub = onHidStatus((status) => setAvailable(status.connected));
+    const unsub = onHidStatus((status) => {
+      setAvailable(status.connected);
+      setMode(status.mode);
+    });
     return () => { unsub(); disconnectHid(); };
   }, []);
 
@@ -38,14 +49,14 @@ export default function HallEffectPage() {
         <div role="status" aria-live="polite" className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${available ? "bg-[#00ff88]/5 border-[#00ff88]/30" : "bg-neutral-800/30 border-neutral-700/30"}`}>
           <FontAwesomeIcon
             icon={available ? faCircleCheck : faCircleXmark}
-            className={`w-5 h-5 ${available ? "text-[#00ff88]" : "text-neutral-500"}`}
+            className={`w-5 h-5 ${available ? "text-[#00ff88]" : "text-neutral-400"}`}
           />
           <div>
             <p className={`text-sm font-medium ${available ? "text-[#00ff88]" : "text-neutral-400"}`}>
               {available === null ? "Checking..." : available ? "Companion service detected" : "Companion service not running"}
             </p>
-            <p className="text-xs text-neutral-500">
-              {available ? "NeuralKeys is receiving analog key data" : "Install and run the companion service to enable this feature"}
+            <p className="text-xs text-neutral-400">
+              {connectionDetail(available, mode)}
             </p>
           </div>
         </div>
@@ -56,10 +67,14 @@ export default function HallEffectPage() {
           <p className="text-sm text-neutral-400 leading-relaxed">
             If you have a <strong className="text-neutral-200">Keychron Hall Effect</strong> keyboard (K2 HE, Q1 HE, K8 HE, etc.), NeuralKeys can read the
             analog sensor data from your keys in real-time. Unlike normal keyboards that only detect &ldquo;pressed&rdquo; or &ldquo;not pressed&rdquo;,
-            your K2 HE measures exactly how far each key travels (0-4mm) at 100 times per second.
+            your K2 HE measures exactly how far each key travels (0-4mm).
           </p>
           <p className="text-sm text-neutral-400 leading-relaxed">
-            This unlocks advanced analytics that are impossible with a regular keyboard:
+            On <strong className="text-neutral-200">stock firmware</strong> the companion polls each key in turn (~5 updates per second) — enough for a live
+            connection and coarse press-depth view. For the full ~100Hz stream that powers the analytics below, you can flash the{" "}
+            <a href="https://github.com/AnalogSense/qmk_firmware" className="text-cyan-400 hover:text-cyan-300 underline" target="_blank" rel="noopener noreferrer">
+              AnalogSense QMK firmware (opens in new tab)
+            </a>. This unlocks analytics that are impossible with a regular keyboard:
           </p>
           <ul className="text-sm text-neutral-400 space-y-1 list-disc list-inside">
             <li><strong className="text-neutral-200">Press depth</strong> — are you bottoming out or typing lightly?</li>
@@ -90,7 +105,7 @@ export default function HallEffectPage() {
                 </a>, or build from source:
               </p>
               <div className="mt-2 p-3 rounded-lg bg-neutral-900 border border-neutral-800 font-mono text-xs">
-                <div className="flex items-center gap-2 text-neutral-500 mb-1">
+                <div className="flex items-center gap-2 text-neutral-400 mb-1">
                   <FontAwesomeIcon icon={faTerminal} className="w-3 h-3" />
                   Terminal
                 </div>
@@ -102,7 +117,7 @@ export default function HallEffectPage() {
               <div className="p-3 rounded-lg bg-neutral-900 border border-neutral-800 font-mono text-xs">
                 <code className="text-cyan-300">./neuralkeys-hid</code>
               </div>
-              <p className="mt-2">You should see &ldquo;Connected. Polling at 100Hz...&rdquo; — that means it&apos;s working.</p>
+              <p className="mt-2">You should see a &ldquo;Connected&rdquo; line naming your firmware mode — that means it&apos;s working.</p>
             </Step>
 
             <Step number={4} title="Open NeuralKeys">
@@ -119,8 +134,8 @@ export default function HallEffectPage() {
           <h2 className="text-xl font-bold">Privacy</h2>
           <ul className="text-sm text-neutral-400 space-y-1 list-disc list-inside">
             <li>All data stays on your computer. Nothing is sent to any server.</li>
-            <li>The service only reads analog sensor values — it cannot see what you type.</li>
-            <li>Keystroke content goes through the OS keyboard driver separately.</li>
+            <li>The service reads sensor <em>depth</em>, not keystrokes — it cannot directly capture what you type (that goes through the OS keyboard driver separately).</li>
+            <li>It accepts connections only from <code className="text-neutral-300">localhost</code>, and the browser-side connection is restricted to local origins.</li>
             <li>No network traffic beyond <code className="text-neutral-300">localhost</code>.</li>
           </ul>
         </section>
@@ -130,13 +145,13 @@ export default function HallEffectPage() {
           <h2 className="text-xl font-bold">Troubleshooting</h2>
           <dl className="text-sm space-y-3">
             <dt className="text-neutral-200 font-medium">&ldquo;No Keychron K2 HE found&rdquo;</dt>
-            <dd className="text-neutral-500 ml-4">Ensure USB wired mode. Try toggling the switch on the back.</dd>
+            <dd className="text-neutral-400 ml-4">Ensure USB wired mode. Try toggling the switch on the back.</dd>
 
             <dt className="text-neutral-200 font-medium">&ldquo;Access denied&rdquo;</dt>
-            <dd className="text-neutral-500 ml-4">Close Keychron Launcher first (it holds exclusive access). On Linux, add a udev rule — see the README.</dd>
+            <dd className="text-neutral-400 ml-4">Close Keychron Launcher first (it holds exclusive access). On Linux, add a udev rule — see the README.</dd>
 
             <dt className="text-neutral-200 font-medium">Status stays red in NeuralKeys</dt>
-            <dd className="text-neutral-500 ml-4">Make sure the companion is running and shows &ldquo;Connected&rdquo; in its terminal output.</dd>
+            <dd className="text-neutral-400 ml-4">Make sure the companion is running and shows &ldquo;Connected&rdquo; in its terminal output.</dd>
           </dl>
         </section>
 
@@ -147,7 +162,7 @@ export default function HallEffectPage() {
           <ul className="text-sm text-neutral-400 list-disc list-inside">
             <li>Keychron K2 HE (ANSI, ISO, JIS)</li>
           </ul>
-          <p className="text-xs text-neutral-500 mt-2">
+          <p className="text-xs text-neutral-400 mt-2">
             Other Keychron HE boards (Q1 HE, K8 HE, etc.) may work but are untested.
             Any board using the same raw HID protocol (0xA9 commands) should be compatible.
           </p>

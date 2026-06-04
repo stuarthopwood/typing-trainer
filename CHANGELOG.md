@@ -4,6 +4,24 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.17.1] — 2026-06-04
+
+### Fixed
+- **HID companion no longer loops forever on stock K2 HE firmware.** The companion service was sending the `0x31` "get travel for all keys" command unconditionally, but stock Keychron firmware silently drops it — every read timed out and the service spun in an endless `Found → Connected → timeout → reconnect` loop (never streaming a single frame). The protocol was guessed; it is now cross-checked against the [AnalogSense](https://github.com/AnalogSense) reference implementation (validated against real hardware across the Keychron HE family).
+
+### Changed
+- **Companion auto-detects firmware capability and picks a polling mode.** During the connection handshake it reads the firmware version response and checks for the batch-support marker (`0x45`):
+  - **Batch mode** (`0x31`, ~100Hz) when the firmware supports it (e.g. the AnalogSense QMK fork).
+  - **Per-key mode** (`0x30`, ~5Hz measured) on stock firmware — walks all 84 keys per frame.
+- `safe_receive_report` now skips interleaved keyboard-input reports (matching the `[0xA9, cmd]` echo header) instead of treating the first report as the response, and flushes stale reports before each command.
+- Read failures are bounded (5 consecutive errors → clean re-enumeration with a clear status) rather than an infinite silent retry. A failed version handshake now logs an actionable error (Bluetooth mode / device held by another app).
+- Companion bumped to `v0.2.0`; added `named-lock` to coordinate raw-HID access with Keychron Launcher (`KeychronMtx`) on Windows.
+- WebSocket status message gains a `mode` field (`"batch"` | `"perkey"` | `null`); `lib/hall-effect.ts` and `/hall-effect` surface the active mode and corrected the previous "always 100Hz" claim.
+
+### Notes
+- Stock firmware tops out at ~5Hz (84 USB round-trips per frame) — fine for a live connection indicator and coarse press-depth, too slow for actuation-velocity/fatigue analytics. Those need the ~100Hz batch mode (custom firmware).
+- No web-app backend changes, no persisted-data schema changes, no new network calls beyond the existing `localhost:39850` WebSocket.
+
 ## [1.17.0] — 2026-05-30
 
 ### Changed
