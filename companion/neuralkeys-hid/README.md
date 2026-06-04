@@ -4,12 +4,31 @@ A lightweight companion service that reads real-time Hall Effect analog key trav
 
 ## What it does
 
-Your K2 HE has Hall Effect sensors that measure exactly how far each key is pressed (0-4mm). This service reads that data at 100Hz and sends it to NeuralKeys for advanced analytics:
+Your K2 HE has Hall Effect sensors that measure exactly how far each key is pressed (0-4mm). This service reads that data and streams it to NeuralKeys via WebSocket for analytics such as per-key press depth, actuation velocity, fatigue detection, and finger identification.
 
-- **Per-key press depth** — are you bottoming out or typing lightly?
-- **Actuation velocity** — how fast you strike each key
-- **Physical fatigue detection** — decreasing force over time
-- **Real finger identification** — each finger has a distinct press profile
+## Two polling modes (important)
+
+The K2 HE raw-HID protocol exposes travel data two ways, and which one you get depends entirely on your **keyboard firmware**:
+
+| Mode | Command | Rate | Requirement |
+| --- | --- | --- | --- |
+| **Batch** | `0x31` (all keys in one round-trip) | **~100 Hz** | Custom firmware that advertises support — the [AnalogSense QMK fork][qmk] |
+| **Per-key** | `0x30` (one key per round-trip) | **~5 Hz** (84 USB round-trips per frame) | Works on **stock** Keychron firmware |
+
+The companion auto-detects which mode your firmware supports during the connection handshake (it reads the firmware version response and checks for the batch-support marker) and picks the right one. The active mode is reported in the `mode` field of the status message and logged on startup.
+
+> **Stock firmware runs at ~5 Hz.** That is enough for a live connection
+> indicator and a coarse press-depth view, but **too slow** for
+> actuation-velocity or fatigue analytics, which need the ~100 Hz batch mode.
+> For full-rate telemetry, flash the [AnalogSense QMK fork][qmk]. This is an
+> advanced, at-your-own-risk step — it replaces your keyboard firmware.
+
+The protocol is cross-checked against the [AnalogSense][as] reference
+implementation, which has been validated against real hardware across the
+Keychron HE family.
+
+[qmk]: https://github.com/AnalogSense/qmk_firmware
+[as]: https://github.com/AnalogSense
 
 ## Requirements
 
@@ -42,13 +61,14 @@ Check the [Releases](https://github.com/stuarthopwood/typing-trainer/releases) p
 ./neuralkeys-hid
 ```
 
-3. You should see:
+3. On stock firmware you should see:
 ```
-NeuralKeys HID Companion v0.1.0
+NeuralKeys HID Companion v0.2.0
 WebSocket server starting on ws://localhost:39850
-Found: Keychron K2 HE (PID: 0x0E20)
-Connected. Polling at 100Hz...
+Found: Keychron K2 HE (PID: 0x0E21)
+Connected (AMC v4). Stock firmware: per-key mode (~5Hz ...). For full-rate (~100Hz) telemetry, flash the AnalogSense QMK fork. See README.
 ```
+On the AnalogSense QMK fork you'll instead see `Batch mode — polling at ~100Hz.`
 
 4. Open NeuralKeys in your browser — it will automatically detect the companion service and show a connection indicator.
 
@@ -81,7 +101,7 @@ Then unplug and replug the keyboard.
 
 The service streams JSON messages on `ws://localhost:39850`:
 
-### Travel Frame (100Hz when connected)
+### Travel Frame (sent continuously when a client is connected)
 ```json
 {
   "timestamp_ms": 1234.5,
@@ -90,26 +110,32 @@ The service streams JSON messages on `ws://localhost:39850`:
 }
 ```
 
-`keys` is a flat array of 96 values (6 rows × 16 cols). Each value is 0-255 where 0 = released, 235 = fully pressed.
+`keys` is a flat array of 96 values (6 rows × 16 cols). Each value is 0-255 where 0 = released, 235 = fully pressed. `poll_rate_hz` reflects the live measured rate — roughly 100 in batch mode, roughly 5 in per-key mode.
 
-### Status Message (on connect/disconnect)
+### Status Message (on connect/disconnect/error)
 ```json
 {
   "connected": true,
   "device": "Keychron K2 HE",
-  "version": "1.2.3",
+  "version": "AMC v4",
+  "mode": "batch",
   "error": null
 }
 ```
 
+`mode` is `"batch"` or `"perkey"` when connected, and `null` otherwise. `version` reports the keyboard's analog-module (AMC) firmware version.
+
 ## Troubleshooting
 
 - **"No Keychron K2 HE found"** — Ensure USB wired mode (not Bluetooth). Try switching the mode toggle on the back.
-- **"Access denied"** — Close Keychron Launcher. On Windows it holds a mutex. On Linux, add the udev rule above.
+- **"Cannot open device" / access denied** — Close Keychron Launcher. On Windows it opens the device exclusively; the companion also takes a named lock (`KeychronMtx`) so the two don't fight over the interface. On Linux, add the udev rule above.
+- **"Handshake failed" / repeated timeouts** — The keyboard didn't answer the version command. It's almost always in Bluetooth mode (raw HID is USB-only) or held by another app. (For context: v0.1.x had a bug where the service blindly sent the batch command stock firmware doesn't support and looped forever; v0.2+ negotiates the supported mode first, so a working keyboard no longer falls into an endless reconnect loop.)
+- **Stuck at ~5Hz** — That's expected on stock firmware (per-key mode). See [Two polling modes](#two-polling-modes-important).
 - **No data streaming** — The service only sends frames when NeuralKeys (or any WebSocket client) is connected.
 
 ## Privacy
 
 - All data stays on your computer. Nothing is sent to any server.
-- The service only reads analog sensor values — it cannot see what you type (that goes through the OS keyboard driver separately).
+- The service reads sensor **depth**, not keystrokes — it cannot directly capture what you type (that goes through the OS keyboard driver separately). Note that, like any analog telemetry, fine-grained timing and press-depth patterns *could* in principle reveal typing behaviour; this is why the socket is locked down (next bullet).
+- The WebSocket binds to `127.0.0.1` only and validates the `Origin` header: browser connections must come from `localhost` / `127.0.0.1`, so a random web page you visit cannot read the stream. Native clients (no `Origin`) are allowed.
 - No video, no screenshots, no network traffic beyond localhost.

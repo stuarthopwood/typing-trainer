@@ -1,0 +1,5 @@
+# Rust build artifacts
+/target
+
+# Cargo.lock IS tracked for this crate — it ships as a binary, so we want
+# reproducible builds. Do not ignore it.

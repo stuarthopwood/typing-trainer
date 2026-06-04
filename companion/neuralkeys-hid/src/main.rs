@@ -2,19 +2,48 @@ mod protocol;
 
 use futures_util::{SinkExt, StreamExt};
 use hidapi::HidApi;
+use named_lock::NamedLock;
 use serde::Serialize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
-use tokio_tungstenite::accept_async;
+use tokio_tungstenite::accept_hdr_async;
+use tokio_tungstenite::tungstenite::handshake::server::{ErrorResponse, Request, Response};
+use tokio_tungstenite::tungstenite::http::StatusCode;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{error, info, warn};
 
-use protocol::{KEYCHRON_VID, K2_HE_PIDS, USAGE_PAGE, USAGE, CMD_PREFIX, CMD_GET_VERSION, CMD_GET_TRAVEL_ALL};
+use protocol::{
+    assemble_batch_payload, build_command, index_to_row_col, parse_version_response,
+    travel_offset_for_version, CMD_GET_TRAVEL, CMD_GET_TRAVEL_ALL, CMD_GET_VERSION, CMD_PREFIX,
+    K2_HE_LAYOUT, K2_HE_PIDS, KEYCHRON_VID, KEY_COUNT, TRAVEL_BATCH_REPORTS, USAGE, USAGE_PAGE,
+};
 
 const WS_PORT: u16 = 39850;
-const POLL_INTERVAL_MS: u64 = 10; // 100Hz
+const POLL_INTERVAL_MS: u64 = 10; // target 100Hz (batch mode)
+const READ_TIMEOUT_MS: i32 = 100;
+/// How many consecutive failed read cycles before we drop the connection and
+/// re-enumerate. Prevents a transient hiccup from killing a working session.
+const MAX_CONSECUTIVE_ERRORS: u32 = 5;
+/// Upper bound on reports drained while waiting for a command's matching
+/// response in [`safe_receive_report`]. At `READ_TIMEOUT_MS` per read this
+/// caps the wait near `MAX_REPORT_DRAIN * READ_TIMEOUT_MS` while still
+/// filtering interleaved keyboard-input reports; exceeding it means the device
+/// is answering with something other than our command echo, so we give up.
+const MAX_REPORT_DRAIN: usize = 16;
+/// Windows mutex name shared with Keychron Launcher / AnalogSense so multiple
+/// readers of the raw-HID interface don't interleave each other's reports.
+const KEYCHRON_MUTEX: &str = "Global\\KeychronMtx";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum PollMode {
+    /// Firmware advertises 0x45 — single round-trip travel for all keys (~100Hz).
+    Batch,
+    /// Stock firmware — one key per round-trip, full sweep per frame (~5Hz).
+    PerKey,
+}
 
 #[derive(Debug, Clone, Serialize)]
 struct TravelFrame {
@@ -28,7 +57,20 @@ struct StatusMessage {
     connected: bool,
     device: Option<String>,
     version: Option<String>,
+    mode: Option<PollMode>,
     error: Option<String>,
+}
+
+impl StatusMessage {
+    fn disconnected(error: impl Into<String>) -> Self {
+        StatusMessage {
+            connected: false,
+            device: None,
+            version: None,
+            mode: None,
+            error: Some(error.into()),
+        }
+    }
 }
 
 fn find_device(api: &HidApi) -> Option<hidapi::DeviceInfo> {
@@ -44,47 +86,122 @@ fn find_device(api: &HidApi) -> Option<hidapi::DeviceInfo> {
     None
 }
 
-fn read_travel_all(device: &hidapi::HidDevice) -> Result<Vec<u8>, String> {
-    let mut cmd = [0u8; 33]; // report ID 0 + 32 bytes
-    cmd[1] = CMD_PREFIX;
-    cmd[2] = CMD_GET_TRAVEL_ALL;
-
-    device.write(&cmd).map_err(|e| format!("write failed: {e}"))?;
-
-    let mut all_data = Vec::with_capacity(128);
-    let mut buf = [0u8; 33];
-
-    for _ in 0..4 {
+/// Read reports until one whose first two bytes echo `[CMD_PREFIX, cmd]`,
+/// discarding interleaved keyboard-input reports. Mirrors AnalogSense's
+/// `safeReceiveReport`. Returns the report payload (including the echo header)
+/// or `Err` on timeout / read failure.
+fn safe_receive_report(device: &hidapi::HidDevice, cmd: u8) -> Result<Vec<u8>, String> {
+    // Bounded so a chatty keyboard can never wedge us in an infinite loop.
+    for _ in 0..MAX_REPORT_DRAIN {
+        let mut buf = [0u8; 33];
         let n = device
-            .read_timeout(&mut buf, 100)
+            .read_timeout(&mut buf, READ_TIMEOUT_MS)
             .map_err(|e| format!("read failed: {e}"))?;
         if n == 0 {
             return Err("timeout reading response".into());
         }
-        // Skip report ID byte (buf[0]), take 32 data bytes
-        all_data.extend_from_slice(&buf[1..n.min(33)]);
+        if n >= 2 && buf[0] == CMD_PREFIX && buf[1] == cmd {
+            return Ok(buf[..n].to_vec());
+        }
+        // else: an interleaved input report — keep reading.
     }
-
-    Ok(all_data)
+    Err("no matching response after draining reports".into())
 }
 
-fn check_version(device: &hidapi::HidDevice) -> Result<String, String> {
-    let mut cmd = [0u8; 33];
-    cmd[1] = CMD_PREFIX;
-    cmd[2] = CMD_GET_VERSION;
+/// Drain any buffered input reports before issuing a command, so the next read
+/// sees our response and not stale typing data. This matters in per-key mode
+/// where every response shares the same `[CMD_PREFIX, 0x30]` header — without
+/// draining first, `safe_receive_report` could return the previous key's value
+/// for the current key.
+///
+/// `read_timeout(.., 0)` is a non-blocking poll: it returns immediately with 0
+/// when the buffer is empty. A read error also ends the drain (the subsequent
+/// command write will surface it); both are expected loop exits, not failures.
+fn discard_stale_reports(device: &hidapi::HidDevice) {
+    let mut buf = [0u8; 33];
+    while let Ok(n) = device.read_timeout(&mut buf, 0) {
+        if n == 0 {
+            break;
+        }
+    }
+}
 
+/// Result of the connection handshake: the analog-module firmware version and
+/// the polling mode it supports. `am_version` drives the per-key payload
+/// offset; the display string is derived once at the call site for logging.
+struct Negotiated {
+    am_version: u8,
+    mode: PollMode,
+}
+
+impl Negotiated {
+    /// Human-readable firmware version for logs and the status message.
+    fn version_string(&self) -> String {
+        format!("AMC v{}", self.am_version)
+    }
+}
+
+/// Send GET_VERSION and decide which polling mode the firmware supports.
+fn negotiate_mode(device: &hidapi::HidDevice) -> Result<Negotiated, String> {
+    discard_stale_reports(device);
+    let cmd = build_command(CMD_GET_VERSION, &[]);
     device.write(&cmd).map_err(|e| format!("write failed: {e}"))?;
 
-    let mut buf = [0u8; 33];
-    let n = device
-        .read_timeout(&mut buf, 500)
-        .map_err(|e| format!("read failed: {e}"))?;
+    let report = safe_receive_report(device, CMD_GET_VERSION)?;
+    let (am_version, is_batch) =
+        parse_version_response(&report).ok_or("version response too short")?;
 
-    if n > 3 {
-        Ok(format!("{}.{}.{}", buf[3], buf[4], buf[5]))
+    let mode = if is_batch {
+        PollMode::Batch
     } else {
-        Err("no version response".into())
+        PollMode::PerKey
+    };
+    Ok(Negotiated { am_version, mode })
+}
+
+/// Batch mode: one 0x31 command yields travel for every key across 4 reports.
+fn read_travel_batch(device: &hidapi::HidDevice) -> Result<Vec<u8>, String> {
+    discard_stale_reports(device);
+    let cmd = build_command(CMD_GET_TRAVEL_ALL, &[]);
+    device.write(&cmd).map_err(|e| format!("write failed: {e}"))?;
+
+    let mut reports: Vec<Vec<u8>> = Vec::with_capacity(TRAVEL_BATCH_REPORTS);
+    for _ in 0..TRAVEL_BATCH_REPORTS {
+        reports.push(safe_receive_report(device, CMD_GET_TRAVEL_ALL)?);
     }
+    let slices: Vec<&[u8]> = reports.iter().map(|r| r.as_slice()).collect();
+    let payload = assemble_batch_payload(&slices);
+    if payload.len() < KEY_COUNT {
+        return Err(format!(
+            "batch payload too short: {} of {KEY_COUNT} bytes",
+            payload.len()
+        ));
+    }
+    Ok(payload)
+}
+
+/// Per-key mode: walk the layout, query 0x30 for each occupied slot, and fold
+/// the responses into a 96-byte frame. `buffer` carries values between sweeps
+/// so the emitted frame is always complete.
+fn read_travel_per_key(
+    device: &hidapi::HidDevice,
+    am_version: u8,
+    buffer: &mut [u8; KEY_COUNT],
+) -> Result<Vec<u8>, String> {
+    let offset = travel_offset_for_version(am_version);
+    for (index, occupied) in K2_HE_LAYOUT.iter().enumerate() {
+        if !occupied {
+            buffer[index] = 0;
+            continue;
+        }
+        let (row, col) = index_to_row_col(index as u8);
+        discard_stale_reports(device);
+        let cmd = build_command(CMD_GET_TRAVEL, &[row, col]);
+        device.write(&cmd).map_err(|e| format!("write failed: {e}"))?;
+        let report = safe_receive_report(device, CMD_GET_TRAVEL)?;
+        buffer[index] = report.get(offset).copied().unwrap_or(0);
+    }
+    Ok(buffer.to_vec())
 }
 
 #[tokio::main]
@@ -97,13 +214,11 @@ async fn main() {
     let (tx, _) = broadcast::channel::<String>(64);
     let tx = Arc::new(tx);
 
-    // Spawn HID polling task
     let tx_hid = tx.clone();
     tokio::task::spawn_blocking(move || {
         hid_poll_loop(tx_hid);
     });
 
-    // WebSocket server
     let listener = match TcpListener::bind(format!("127.0.0.1:{WS_PORT}")).await {
         Ok(l) => l,
         Err(e) => {
@@ -119,11 +234,13 @@ async fn main() {
         let mut rx = tx.subscribe();
 
         tokio::spawn(async move {
-            // Origin validation happens at the application level after accept
-        let ws = match accept_async(stream).await {
+            // Reject cross-origin browser connections during the handshake —
+            // only loopback origins (or native clients with no Origin) may read
+            // the analog stream. See `origin_guard` / `is_origin_allowed`.
+            let ws = match accept_hdr_async(stream, origin_guard).await {
                 Ok(ws) => ws,
                 Err(e) => {
-                    error!("WebSocket handshake failed: {e}");
+                    error!("WebSocket handshake failed or rejected: {e}");
                     return;
                 }
             };
@@ -156,6 +273,52 @@ async fn main() {
     }
 }
 
+fn broadcast_status(tx: &broadcast::Sender<String>, status: &StatusMessage) {
+    let _ = tx.send(serde_json::to_string(status).unwrap_or_default());
+}
+
+/// Handshake callback for `accept_hdr_async`: allow the upgrade only from a
+/// permitted origin, otherwise respond 403. The large-`Err` lint is allowed
+/// here because the `Result<Response, ErrorResponse>` shape is dictated by the
+/// tokio-tungstenite callback signature — we can't box it.
+#[allow(clippy::result_large_err)]
+fn origin_guard(req: &Request, response: Response) -> Result<Response, ErrorResponse> {
+    let origin = req.headers().get("origin").and_then(|v| v.to_str().ok());
+    if is_origin_allowed(origin) {
+        Ok(response)
+    } else {
+        warn!("Rejected WebSocket connection from disallowed origin: {origin:?}");
+        let mut err = ErrorResponse::new(Some(
+            "origin not allowed; companion only accepts localhost".to_string(),
+        ));
+        *err.status_mut() = StatusCode::FORBIDDEN;
+        Err(err)
+    }
+}
+
+/// Whether a WebSocket `Origin` header is allowed to connect.
+///
+/// The companion streams per-key analog travel — combined with timing analysis
+/// that could leak typing behaviour — so we don't let arbitrary web pages open
+/// the socket just because they run on the same machine. Native clients send no
+/// `Origin` (allowed); browsers must originate from localhost / 127.0.0.1.
+fn is_origin_allowed(origin: Option<&str>) -> bool {
+    match origin {
+        // Native (non-browser) clients send no Origin header.
+        None => true,
+        Some(o) => {
+            let host = o
+                .strip_prefix("http://")
+                .or_else(|| o.strip_prefix("https://"))
+                .unwrap_or(o);
+            // Strip any :port suffix, then match loopback hosts exactly.
+            let host = host.split('/').next().unwrap_or(host);
+            let host = host.rsplit_once(':').map(|(h, _)| h).unwrap_or(host);
+            host == "localhost" || host == "127.0.0.1" || host == "[::1]"
+        }
+    }
+}
+
 fn hid_poll_loop(tx: Arc<broadcast::Sender<String>>) {
     loop {
         let api = match HidApi::new() {
@@ -170,13 +333,12 @@ fn hid_poll_loop(tx: Arc<broadcast::Sender<String>>) {
         let device_info = match find_device(&api) {
             Some(d) => d,
             None => {
-                let status = StatusMessage {
-                    connected: false,
-                    device: None,
-                    version: None,
-                    error: Some("No Keychron K2 HE found. Ensure USB wired mode.".into()),
-                };
-                let _ = tx.send(serde_json::to_string(&status).unwrap_or_default());
+                broadcast_status(
+                    &tx,
+                    &StatusMessage::disconnected(
+                        "No Keychron K2 HE found. Ensure USB wired mode.",
+                    ),
+                );
                 warn!("No K2 HE device found, retrying in 5s...");
                 std::thread::sleep(Duration::from_secs(5));
                 continue;
@@ -188,79 +350,242 @@ fn hid_poll_loop(tx: Arc<broadcast::Sender<String>>) {
             .unwrap_or("Keychron K2 HE")
             .to_string();
 
-        info!("Found: {device_name} (PID: 0x{:04X})", device_info.product_id());
+        info!(
+            "Found: {device_name} (PID: 0x{:04X})",
+            device_info.product_id()
+        );
 
         let device = match device_info.open_device(&api) {
             Ok(d) => d,
             Err(e) => {
-                error!("Failed to open device: {e}");
+                error!("Failed to open device: {e}. On Windows, close Keychron Launcher (it opens the device exclusively).");
+                broadcast_status(
+                    &tx,
+                    &StatusMessage::disconnected(format!(
+                        "Cannot open device: {e}. Close Keychron Launcher and retry."
+                    )),
+                );
                 std::thread::sleep(Duration::from_secs(5));
                 continue;
             }
         };
 
-        let version = check_version(&device).unwrap_or_else(|e| {
-            warn!("Version check failed: {e}");
-            "unknown".into()
-        });
+        // Coordinate raw-HID access with Keychron Launcher / AnalogSense.
+        // `_guard` must live until the end of this loop iteration — it holds the
+        // mutex for the whole device session. Do NOT drop it early or move it
+        // into a sub-scope, or Keychron Launcher contention reappears. On
+        // non-Windows platforms this is a harmless file lock with no contention.
+        let _guard = NamedLock::create(KEYCHRON_MUTEX)
+            .ok()
+            .and_then(|lock| lock.lock().ok());
 
-        let status = StatusMessage {
-            connected: true,
-            device: Some(device_name.clone()),
-            version: Some(version),
-            error: None,
+        let negotiated = match negotiate_mode(&device) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Mode negotiation failed: {e}. The keyboard did not answer GET_VERSION — it may be in Bluetooth mode or held by another app.");
+                broadcast_status(
+                    &tx,
+                    &StatusMessage::disconnected(format!("Handshake failed: {e}")),
+                );
+                std::thread::sleep(Duration::from_secs(5));
+                continue;
+            }
         };
-        let _ = tx.send(serde_json::to_string(&status).unwrap_or_default());
-        info!("Connected. Polling at {}Hz...", 1000 / POLL_INTERVAL_MS);
 
-        let start = Instant::now();
-        let mut frame_count: u64 = 0;
-        let mut last_rate_check = Instant::now();
+        let version = negotiated.version_string();
+        match negotiated.mode {
+            PollMode::Batch => info!(
+                "Connected ({version}). Batch mode — polling at ~{}Hz.",
+                1000 / POLL_INTERVAL_MS
+            ),
+            PollMode::PerKey => warn!(
+                "Connected ({version}). Stock firmware: per-key mode (~5Hz — each of \
+                 the 84 keys is polled individually over USB). For full-rate (~100Hz) \
+                 telemetry, flash the AnalogSense QMK fork. See README."
+            ),
+        }
 
-        loop {
-            let frame_start = Instant::now();
+        broadcast_status(
+            &tx,
+            &StatusMessage {
+                connected: true,
+                device: Some(device_name.clone()),
+                version: Some(version),
+                mode: Some(negotiated.mode),
+                error: None,
+            },
+        );
 
-            match read_travel_all(&device) {
-                Ok(keys) => {
-                    frame_count += 1;
-                    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+        run_poll_session(&tx, &device, &device_name, negotiated.mode, negotiated.am_version);
+    }
+}
 
-                    let rate = if last_rate_check.elapsed() >= Duration::from_secs(1) {
-                        let r = frame_count as f32 / start.elapsed().as_secs_f32();
-                        last_rate_check = Instant::now();
-                        r
-                    } else {
-                        0.0
-                    };
+/// Tracks consecutive read failures and decides when a session is dead.
+/// Extracted so the give-up policy is unit-testable without real hardware.
+struct ErrorTracker {
+    consecutive: u32,
+    max: u32,
+}
 
+impl ErrorTracker {
+    fn new(max: u32) -> Self {
+        ErrorTracker { consecutive: 0, max }
+    }
+
+    fn record_success(&mut self) {
+        self.consecutive = 0;
+    }
+
+    /// Records a failure and returns `true` when the caller should give up.
+    fn record_failure(&mut self) -> bool {
+        self.consecutive += 1;
+        self.consecutive >= self.max
+    }
+}
+
+/// Poll the device until a sustained read failure, then return to re-enumerate.
+fn run_poll_session(
+    tx: &broadcast::Sender<String>,
+    device: &hidapi::HidDevice,
+    device_name: &str,
+    mode: PollMode,
+    am_version: u8,
+) {
+    let start = Instant::now();
+    let mut frame_count: u64 = 0;
+    let mut last_rate_check = Instant::now();
+    let mut errors = ErrorTracker::new(MAX_CONSECUTIVE_ERRORS);
+    let mut per_key_buffer = [0u8; KEY_COUNT];
+
+    loop {
+        let frame_start = Instant::now();
+
+        let result = match mode {
+            PollMode::Batch => read_travel_batch(device),
+            PollMode::PerKey => read_travel_per_key(device, am_version, &mut per_key_buffer),
+        };
+
+        match result {
+            Ok(keys) => {
+                errors.record_success();
+                frame_count += 1;
+                let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+
+                // Rate is a session-lifetime average (frames / seconds since
+                // start), recomputed at most once per second to keep the field
+                // cheap; it deliberately smooths over momentary jitter.
+                let rate = if last_rate_check.elapsed() >= Duration::from_secs(1) {
+                    let r = frame_count as f32 / start.elapsed().as_secs_f32();
+                    last_rate_check = Instant::now();
+                    r
+                } else {
+                    0.0
+                };
+
+                if tx.receiver_count() > 0 {
                     let frame = TravelFrame {
                         timestamp_ms: elapsed,
                         keys,
                         poll_rate_hz: rate,
                     };
-
-                    if tx.receiver_count() > 0 {
-                        let _ = tx.send(serde_json::to_string(&frame).unwrap_or_default());
-                    }
-                }
-                Err(e) => {
-                    warn!("Read error: {e}");
-                    let status = StatusMessage {
-                        connected: false,
-                        device: Some(device_name.clone()),
-                        version: None,
-                        error: Some(e),
-                    };
-                    let _ = tx.send(serde_json::to_string(&status).unwrap_or_default());
-                    break; // Reconnect loop
+                    let _ = tx.send(serde_json::to_string(&frame).unwrap_or_default());
                 }
             }
+            Err(e) => {
+                let give_up = errors.record_failure();
+                warn!("Read error ({}/{MAX_CONSECUTIVE_ERRORS}): {e}", errors.consecutive);
+                if give_up {
+                    error!("Lost device after {MAX_CONSECUTIVE_ERRORS} consecutive errors; re-enumerating.");
+                    broadcast_status(
+                        tx,
+                        &StatusMessage {
+                            connected: false,
+                            device: Some(device_name.to_string()),
+                            version: None,
+                            mode: None,
+                            error: Some(e),
+                        },
+                    );
+                    return;
+                }
+            }
+        }
 
+        // Batch mode paces itself to the target interval. Per-key mode is
+        // already rate-limited by its per-key round trips, so don't add sleep.
+        if mode == PollMode::Batch {
             let elapsed = frame_start.elapsed();
             let target = Duration::from_millis(POLL_INTERVAL_MS);
             if elapsed < target {
                 std::thread::sleep(target - elapsed);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn given_no_errors_when_failure_recorded_below_max_then_does_not_give_up() {
+        // Given a tracker allowing 3 failures
+        let mut tracker = ErrorTracker::new(3);
+        // When two failures are recorded
+        // Then the caller is not told to give up yet
+        assert!(!tracker.record_failure());
+        assert!(!tracker.record_failure());
+    }
+
+    #[test]
+    fn given_failures_at_threshold_when_recorded_then_gives_up() {
+        // Given a tracker allowing 3 failures
+        let mut tracker = ErrorTracker::new(3);
+        // When the third consecutive failure is recorded
+        tracker.record_failure();
+        tracker.record_failure();
+        // Then the caller is told to give up
+        assert!(tracker.record_failure());
+    }
+
+    #[test]
+    fn given_a_success_when_recorded_then_failure_streak_resets() {
+        // Given a tracker that has seen two failures
+        let mut tracker = ErrorTracker::new(3);
+        tracker.record_failure();
+        tracker.record_failure();
+        // When a success interrupts the streak
+        tracker.record_success();
+        // Then it takes a full new streak to give up
+        assert!(!tracker.record_failure());
+        assert!(!tracker.record_failure());
+        assert!(tracker.record_failure());
+    }
+
+    #[test]
+    fn given_no_origin_header_when_checked_then_allowed() {
+        // Given a native client that sends no Origin
+        // Then it is allowed (browsers always send Origin; native tools don't)
+        assert!(is_origin_allowed(None));
+    }
+
+    #[test]
+    fn given_localhost_origins_when_checked_then_allowed() {
+        // Given browser origins on loopback hosts (with assorted ports/schemes)
+        // Then each is allowed
+        assert!(is_origin_allowed(Some("http://localhost:3000")));
+        assert!(is_origin_allowed(Some("http://127.0.0.1:39850")));
+        assert!(is_origin_allowed(Some("https://localhost")));
+        assert!(is_origin_allowed(Some("http://[::1]:8080")));
+    }
+
+    #[test]
+    fn given_remote_origins_when_checked_then_rejected() {
+        // Given origins that are not loopback
+        // Then each is rejected
+        assert!(!is_origin_allowed(Some("https://evil.example.com")));
+        assert!(!is_origin_allowed(Some("http://localhost.evil.com")));
+        assert!(!is_origin_allowed(Some("http://127.0.0.1.evil.com")));
+        assert!(!is_origin_allowed(Some("null")));
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "neuralkeys-hid"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Companion service for NeuralKeys — reads Hall Effect analog data from Keychron K2 HE via raw HID and exposes it over WebSocket"
 license = "MIT"
@@ -14,3 +14,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = "0.3"
+named-lock = "0.4"
