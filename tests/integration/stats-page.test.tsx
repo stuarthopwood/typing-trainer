@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import StatsPage from "@/app/stats/page";
+import { loadAllSessions } from "@/lib/sessions";
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -156,5 +157,111 @@ describe("StatsPage — header + toast persistence (US1 #3, FR-017, FR-018)", ()
     expect(
       screen.getByRole("button", { name: /^undo$/i }),
     ).toBeInTheDocument();
+  });
+});
+
+// ─── History charts must not flash in then disappear ────────────────────────
+
+describe("StatsPage — history charts survive the async load (regression)", () => {
+  it("should keep history charts mounted when the remote load returns fewer sessions than local", async () => {
+    // Given two legacy local sessions WITHOUT ids (saved before the `id` field
+    // existed) ...
+    const legacy = JSON.parse(JSON.stringify(PROGRESS_FIXTURE));
+    delete legacy.recentSessions[0].id;
+    delete legacy.recentSessions[1].id;
+    vi.stubGlobal(
+      "localStorage",
+      makeStubStorage({
+        "typing-trainer-progress": JSON.stringify(legacy),
+        "typing-trainer-pin": "1234",
+      }),
+    );
+    // ... and a remote history that returns just ONE (different) session.
+    // The old merge dropped the id-less locals, leaving a single session —
+    // below the 2-session chart threshold — so the charts flashed in (from the
+    // pre-load localStorage render) then vanished once the load resolved.
+    vi.mocked(loadAllSessions).mockResolvedValueOnce([
+      {
+        id: "remote-x",
+        timestamp: "2026-05-27T10:00:00Z",
+        date: "2026-05-27",
+        wpm: 50,
+        accuracy: 90,
+        mode: "drill",
+        duration: 30000,
+        charsTyped: 150,
+        modeDetails: { type: "drill", level: "home-row" },
+      },
+    ] as never);
+
+    render(<StatsPage />);
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: /history/i })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole("tab", { name: /history/i }));
+
+    // Then the charts "flash in" from the 2 pre-load local sessions ...
+    expect(await screen.findByText(/sessions per week/i)).toBeInTheDocument();
+    expect(screen.getByText(/mode breakdown/i)).toBeInTheDocument();
+
+    // ... the async remote load runs ...
+    await waitFor(() => expect(loadAllSessions).toHaveBeenCalled());
+
+    // ... and the charts STAY mounted (1 remote + 2 retained id-less locals = 3,
+    // above the 2-session threshold). The old code shrank to 1 and unmounted.
+    await waitFor(
+      () =>
+        expect(screen.getByText(/sessions per week/i)).toBeInTheDocument(),
+      { timeout: 200 },
+    );
+    expect(screen.getByText(/mode breakdown/i)).toBeInTheDocument();
+  });
+
+  it("should still show charts when the merged count lands exactly on the threshold", async () => {
+    // Given ONE id-less legacy local session ...
+    const legacy = JSON.parse(JSON.stringify(PROGRESS_FIXTURE));
+    legacy.recentSessions = [legacy.recentSessions[0]];
+    delete legacy.recentSessions[0].id;
+    vi.stubGlobal(
+      "localStorage",
+      makeStubStorage({
+        "typing-trainer-progress": JSON.stringify(legacy),
+        "typing-trainer-pin": "1234",
+      }),
+    );
+    // ... plus ONE remote session → 2 total, exactly the chart threshold.
+    vi.mocked(loadAllSessions).mockResolvedValueOnce([
+      {
+        id: "remote-x",
+        timestamp: "2026-05-27T10:00:00Z",
+        date: "2026-05-27",
+        wpm: 50,
+        accuracy: 90,
+        mode: "drill",
+        duration: 30000,
+        charsTyped: 150,
+        modeDetails: { type: "drill", level: "home-row" },
+      },
+    ] as never);
+
+    render(<StatsPage />);
+    await waitFor(() => expect(loadAllSessions).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("tab", { name: /history/i }));
+
+    // Then charts render at exactly 2 sessions (the `>= 2` boundary).
+    expect(await screen.findByText(/sessions per week/i)).toBeInTheDocument();
+  });
+
+  it("should fall back to local sessions when the remote load fails", async () => {
+    // Given a remote load that rejects, with 2 valid local sessions present
+    vi.mocked(loadAllSessions).mockRejectedValueOnce(new Error("blob down"));
+
+    render(<StatsPage />);
+    await waitFor(() => expect(loadAllSessions).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("tab", { name: /history/i }));
+
+    // Then the charts still render from the localStorage fallback (catch branch).
+    expect(await screen.findByText(/sessions per week/i)).toBeInTheDocument();
+    expect(screen.getByText(/mode breakdown/i)).toBeInTheDocument();
   });
 });

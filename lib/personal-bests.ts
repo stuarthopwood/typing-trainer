@@ -3,7 +3,8 @@ import type { EnrichedSessionSummary, KeyStroke } from "./types";
 export interface PersonalBest {
   value: number;
   date: string;
-  sessionId: string;
+  /** Source session id; optional because legacy sessions may lack one. */
+  sessionId?: string;
 }
 
 export interface PersonalBests {
@@ -27,7 +28,7 @@ export interface FunEquivalence {
   value: string;
 }
 
-const EMPTY_PB: PersonalBest = { value: 0, date: "", sessionId: "" };
+const EMPTY_PB: PersonalBest = { value: 0, date: "" };
 
 export function emptyPersonalBests(): PersonalBests {
   return {

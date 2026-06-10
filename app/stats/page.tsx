@@ -47,9 +47,14 @@ export default function StatsPage() {
       .then((sessions) => {
         const local = p.recentSessions || [];
         const seen = new Set(sessions.map((s) => s.id));
+        // Keep id-less local sessions too: legacy sessions saved before the
+        // `id` field existed can't be deduped, but dropping them shrinks the
+        // displayed set below the chart threshold once the remote load lands,
+        // which makes the history charts flash in then vanish. They still
+        // carry the date/wpm/mode the charts need.
         const merged = [
           ...sessions,
-          ...local.filter((s) => s.id && !seen.has(s.id)),
+          ...local.filter((s) => !s.id || !seen.has(s.id)),
         ];
         merged.sort((a, b) =>
           (b.timestamp || b.date).localeCompare(a.timestamp || a.date),
@@ -129,7 +134,13 @@ export default function StatsPage() {
 
   if (!progress) return null;
 
-  const sessions = allSessions.length > 0 ? allSessions : progress.recentSessions;
+  // Show whichever source has more sessions. Before the async history load
+  // resolves, `allSessions` is empty and we fall back to localStorage's
+  // `recentSessions`; afterwards `allSessions` is the merged superset. Using
+  // `max` (not "allSessions if non-empty") guarantees the count never shrinks
+  // between the two renders, so charts can't flash in and then unmount.
+  const recent = progress.recentSessions ?? [];
+  const sessions = allSessions.length >= recent.length ? allSessions : recent;
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-[#0d0d0d]">

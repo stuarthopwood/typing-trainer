@@ -1,6 +1,6 @@
 "use client";
 
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import type { EnrichedSessionSummary } from "@/lib/types";
 
 interface SessionsPerWeekProps {
@@ -28,17 +28,17 @@ export default function SessionsPerWeek({ sessions }: SessionsPerWeekProps) {
     <div className="space-y-2">
       <h3 className="text-sm text-neutral-400 uppercase tracking-wider text-center">Sessions Per Week</h3>
       <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <XAxis dataKey="week" tick={{ fill: "#a3a3a3", fontSize: 10 }} tickLine={false} axisLine={false} />
           <YAxis tick={{ fill: "#a3a3a3", fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
           <Tooltip
             contentStyle={{ backgroundColor: "#141414", border: "1px solid #333", borderRadius: "8px" }}
             labelStyle={{ color: "#999" }}
             itemStyle={{ color: "#00ff88" }}
-            cursor={false}
+            cursor={{ stroke: "#333", strokeWidth: 1 }}
           />
-          <Bar dataKey="count" fill="#00ff88" radius={[4, 4, 0, 0]} name="Sessions" />
-        </BarChart>
+          <Line type="monotone" dataKey="count" stroke="#00ff88" strokeWidth={2} dot={{ r: 3, fill: "#00ff88" }} name="Sessions" />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
