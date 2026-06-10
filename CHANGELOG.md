@@ -4,6 +4,18 @@ All notable changes to NeuralKeys are recorded here. Format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [1.17.3] — 2026-06-10
+
+### Fixed
+- **History/Performance charts no longer flash in then disappear.** On `/stats`, the post-load session merge dropped local sessions that lacked an `id` (legacy sessions saved before the `id` field existed), and the display selector switched to the now-smaller merged set once the async remote load resolved — dropping the session count below the 2-session chart threshold, so the charts unmounted. The merge now retains id-less local sessions, and the selector is non-shrinking (shows whichever source has more sessions), so the count never drops between renders.
+
+### Changed
+- `EnrichedSessionSummary.id` and `PersonalBest.sessionId` are now typed optional (`id?: string`) to match reality — legacy sessions genuinely lack an id, and the code already guards for it. This makes the existing `!session.id` guards type-enforced rather than relying on an inaccurate `string` type.
+- `SessionsPerWeek` chart converted from a bar chart to a line chart (it's a weekly time series).
+
+### Notes
+- Added a regression test (`tests/integration/stats-page.test.tsx`) that reproduces the flash — verified to fail on the pre-fix code and pass after — plus threshold-boundary and remote-failure-fallback cases.
+
 ## [1.17.2] — 2026-06-04
 
 ### Fixed

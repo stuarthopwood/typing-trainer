@@ -43,7 +43,12 @@ export interface SessionTimingMetadata {
 }
 
 export interface EnrichedSessionSummary {
-  id: string;
+  /**
+   * Stable id, used for dedup + deletion. Optional because legacy sessions
+   * persisted before this field existed have none — code that deletes or
+   * dedups by id MUST guard for its absence.
+   */
+  id?: string;
   timestamp: string;
   date: string;
   wpm: number;
